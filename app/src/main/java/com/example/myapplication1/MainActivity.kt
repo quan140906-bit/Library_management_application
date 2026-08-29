@@ -43,7 +43,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
+import com.example.myapplication1.ui.theme.DashBoard.InventoryManagementScreen
 
 class MainActivity : ComponentActivity() {
 
@@ -74,6 +74,9 @@ fun ALFMApp() {
             LoginScreen(
                 onRegisterClick = {
                     currentScreen = "register"
+                },
+                onLoginSuccess = {
+                    currentScreen = "library"
                 }
             )
         }
@@ -85,6 +88,9 @@ fun ALFMApp() {
                 }
             )
         }
+        "library" -> {
+            InventoryManagementScreen()
+        }
     }
 }
 
@@ -95,7 +101,8 @@ fun ALFMApp() {
 
 @Composable
 fun LoginScreen(
-    onRegisterClick: () -> Unit
+    onRegisterClick: () -> Unit,
+    onLoginSuccess: () -> Unit
 ) {
 
     var email by remember {
@@ -305,8 +312,10 @@ fun LoginScreen(
                                 password.isBlank() ->
                                     "Vui lòng nhập mật khẩu"
 
-                                else ->
+                                else -> {
+                                    onLoginSuccess() // Đăng nhập k qua database, xóa đi khi xog database
                                     "Đăng nhập thành công"
+                                }
                             }
 
                     },

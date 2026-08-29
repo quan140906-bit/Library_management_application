@@ -21,8 +21,11 @@ fun InventoryManagementScreen() {
     val repository = remember { BookRepository() }
     var books by remember { mutableStateOf(repository.getAllBooks()) }
 
+    val total = books.size
     val readCount = books.count { it.status == BookStatus.READ }
-    val progressPercent = if (books.isEmpty()) 0 else (readCount * 100) / books.size
+    val readingCount = books.count { it.status == BookStatus.READING }
+    val unreadCount = books.count { it.status == BookStatus.UNREAD }
+    val progressPercent = if (total == 0) 0 else (readCount * 100) / total
 
     // Thanh tiến độ tự động animate mượt mỗi khi progressPercent thay đổi
     val animatedProgress by animateFloatAsState(
@@ -40,6 +43,24 @@ fun InventoryManagementScreen() {
         Text("Quản lý tủ sách của bạn", style = MaterialTheme.typography.bodyMedium)
 
         Spacer(modifier = Modifier.height(24.dp))
+
+        // Hàng 1: Tổng sách + Đã đọc
+        Row(modifier = Modifier.fillMaxWidth()) {
+            StatCard(label = "Tổng sách", value = total.toString(), modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.width(12.dp))
+            StatCard(label = "Đã đọc", value = readCount.toString(), modifier = Modifier.weight(1f))
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Hàng 2: Đang đọc + Chưa đọc
+        Row(modifier = Modifier.fillMaxWidth()) {
+            StatCard(label = "Đang đọc", value = readingCount.toString(), modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.width(12.dp))
+            StatCard(label = "Chưa đọc", value = unreadCount.toString(), modifier = Modifier.weight(1f))
+        }
+
+        Spacer(modifier = Modifier.height(28.dp))
 
         // Thẻ tiến độ
         Card(
@@ -80,6 +101,26 @@ fun InventoryManagementScreen() {
                 )
                 Spacer(modifier = Modifier.height(10.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
+    Card(
+        shape = RoundedCornerShape(18.dp),
+        modifier = modifier.height(100.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(label, style = MaterialTheme.typography.bodyMedium)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(value, style = MaterialTheme.typography.headlineSmall)
         }
     }
 }
