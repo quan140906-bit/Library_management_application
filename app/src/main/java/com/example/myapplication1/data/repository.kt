@@ -8,8 +8,7 @@ class UserRepository {
     }
 }
 
-class BookRepository {
-    // Test sau này thay, bằng gọi API/Room
+class BookRepository {    // Test sau này thay, bằng gọi API/Room
     private val books = mutableListOf(
         Book(1, "Đắc Nhân Tâm", "Dale Carnegie", BookStatus.READ),
         Book(2, "Nhà Giả Kim", "Paulo Coelho", BookStatus.READ),
@@ -17,7 +16,7 @@ class BookRepository {
         Book(4, "Deep Work", "Cal Newport", BookStatus.READING)
     )
 
-    fun getAllBooks(): List<Book> = books
+    fun getAllBooks(): List<Book> = books.toList()
 
     /** Đánh dấu 1 sách là đã đọc xong. */
     fun markAsRead(bookId: Int) {
