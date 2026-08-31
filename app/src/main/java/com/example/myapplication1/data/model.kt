@@ -10,5 +10,8 @@ data class Book(
     val id: Int,
     val title: String,
     val author: String,
-    var status: BookStatus
+    var status: BookStatus,
+    val imageUrl: String? = null,
+    val publishYear: Int? = null,
+    val genre: String? = null
 )
