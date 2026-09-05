@@ -1,28 +1,38 @@
 package com.example.myapplication1.data
 
+import com.google.firebase.firestore.FirebaseFirestore
+
 class UserRepository {
-    // Hàm giả lập gọi API đăng ký
+    // Hàm giả lập gọi API đăng ký (Giữ nguyên của bạn)
     fun registerUser(email: String): Boolean {
-        // Xử lý gửi lên server ở đây...
-        return email.isNotEmpty() // Trả về true nếu thành công
+        return email.isNotEmpty()
     }
 }
 
-class BookRepository {    // Test sau này thay, bằng gọi API/Room
-    private val books = mutableListOf(
-        Book(1, "Đắc Nhân Tâm", "Dale Carnegie", BookStatus.READ),
-        Book(2, "Nhà Giả Kim", "Paulo Coelho", BookStatus.READ),
-        Book(3, "Atomic Habits", "James Clear", BookStatus.READING),
-        Book(4, "Deep Work", "Cal Newport", BookStatus.READING)
-    )
+class BookRepository {
+    // --- PHẦN FIREBASE MỚI THÊM VÀO ---
+    private val db = FirebaseFirestore.getInstance()
+    private val booksCollection = db.collection("books")
 
-    fun getAllBooks(): List<Book> = books.toList()
+    // Hàm 1: Đẩy sách lên Firebase
+    fun addBook(book: Book, onSuccess: () -> Unit, onFailure: (Exception) -> Unit) {
+        val newDocRef = booksCollection.document()
+        book.id = newDocRef.id // Lấy ID ngẫu nhiên từ Firebase bằng chữ (String)
 
-    /** Đánh dấu 1 sách là đã đọc xong. */
-    fun markAsRead(bookId: Int) {
-        val index = books.indexOfFirst { it.id == bookId }
-        if (index != -1) {
-            books[index] = books[index].copy(status = BookStatus.READ)
-        }
+        newDocRef.set(book)
+            .addOnSuccessListener { onSuccess() }
+            .addOnFailureListener { exception -> onFailure(exception) }
+    }
+
+    // --- XỬ LÝ TẠM CÁC HÀM CŨ ĐỂ APP KHÔNG BỊ LỖI ---
+
+    // Hàm 2: Tạm thời trả về danh sách rỗng (Bài sau mình sẽ viết code kéo sách từ Firebase về đây)
+    fun getAllBooks(): List<Book> {
+        return emptyList()
+    }
+
+    // Hàm 3: Đổi bookId thành String (Do Firebase dùng chữ, không dùng số nguyên Int nữa)
+    fun markAsRead(bookId: String) {
+        // Tạm thời để trống. Bài sau mình sẽ viết code update trực tiếp lên Firebase
     }
 }

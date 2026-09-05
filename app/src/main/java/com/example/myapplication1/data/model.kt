@@ -1,5 +1,6 @@
 package com.example.myapplication1.data
 
+// Giữ lại Enum của bạn
 enum class BookStatus {
     READ,
     READING,
@@ -7,8 +8,12 @@ enum class BookStatus {
 }
 
 data class Book(
-    val id: Int,
-    val title: String,
-    val author: String,
-    var status: BookStatus
+    var id: String = "",            // ID kiểu String cho Firebase
+    var title: String = "",
+    var author: String = "",
+    var genre: String = "",
+    var isbn: String = "",
+    var quantity: Int = 0,
+    var coverUrl: String = "",
+    var status: BookStatus = BookStatus.UNREAD // Khôi phục lại trạng thái
 )

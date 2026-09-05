@@ -36,14 +36,14 @@ private enum class BookFilter {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InventoryManagementScreen() {
+fun InventoryManagementScreen(onNavigateToAddBook: () -> Unit = {}) {
     val repository = remember { BookRepository() }
     var books by remember { mutableStateOf(repository.getAllBooks()) }
 
     var isSearching by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf(BookFilter.ALL) }
-    var selectedBookId by remember { mutableStateOf<Int?>(null) }
+    var selectedBookId by remember { mutableStateOf<String?>(null) }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -112,6 +112,7 @@ fun InventoryManagementScreen() {
                     onClick = {
                         scope.launch { drawerState.close() }
                         // điều hướng sang màn hình Thêm sách sau này
+                        onNavigateToAddBook() // <--- BẠN CHỈ CẦN THÊM ĐÚNG DÒNG NÀY VÀO ĐÂY
                     },
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )

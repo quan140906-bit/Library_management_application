@@ -48,7 +48,8 @@ import com.example.myapplication1.ui.theme.DashBoard.InventoryManagementScreen
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+        super.onCreate(savedInstanceState) // Dòng này bắt buộc phải nằm ngay đầu tiên
+
 
         setContent {
             ALFMApp()
@@ -87,9 +88,17 @@ fun ALFMApp() {
                     currentScreen = "login"
                 }
             )
+
         }
         "library" -> {
-            InventoryManagementScreen()
+            com.example.myapplication1.ui.theme.DashBoard.InventoryManagementScreen(
+                onNavigateToAddBook = { currentScreen = "add_book" }
+            )
+        }
+        "add_book" -> {
+            com.example.myapplication1.ui.theme.DashBoard.AddBookScreen(
+                onBackClick = { currentScreen = "library" }
+            )
         }
     }
 }
