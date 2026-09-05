@@ -28,7 +28,7 @@ import com.example.myapplication1.data.BookRepository
 import com.example.myapplication1.data.BookStatus
 import kotlinx.coroutines.launch
 
-private val PrimaryPurple = Color(0xFF6750A4)
+val PrimaryPurple = Color(0xFF6750A4)
 
 private enum class BookFilter {
     ALL, READ, UNREAD
@@ -36,17 +36,31 @@ private enum class BookFilter {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InventoryManagementScreen(onNavigateToAddBook: () -> Unit = {}) {
+fun InventoryManagementScreen() {
     val repository = remember { BookRepository() }
     var books by remember { mutableStateOf(repository.getAllBooks()) }
 
     var isSearching by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf(BookFilter.ALL) }
-    var selectedBookId by remember { mutableStateOf<String?>(null) }
+    var selectedBookId by remember { mutableStateOf<Int?>(null) }
+    var showAddBookScreen by remember { mutableStateOf(false) }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+
+    // Màn hình Thêm sách hiển thị riêng, thay cho toàn bộ nội dung bên dưới
+    if (showAddBookScreen) {
+        AddBookScreen(
+            onCancel = { showAddBookScreen = false },
+            onSave = { title, author, imageUrl, publishYear, genre ->
+                repository.addBook(title, author, imageUrl, publishYear, genre)
+                books = repository.getAllBooks()
+                showAddBookScreen = false
+            }
+        )
+        return
+    }
 
     val selectedBook = books.firstOrNull { it.id == selectedBookId }
 
@@ -111,8 +125,7 @@ fun InventoryManagementScreen(onNavigateToAddBook: () -> Unit = {}) {
                     selected = false,
                     onClick = {
                         scope.launch { drawerState.close() }
-                        // điều hướng sang màn hình Thêm sách sau này
-                        onNavigateToAddBook() // <--- BẠN CHỈ CẦN THÊM ĐÚNG DÒNG NÀY VÀO ĐÂY
+                        showAddBookScreen = true
                     },
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
@@ -123,7 +136,7 @@ fun InventoryManagementScreen(onNavigateToAddBook: () -> Unit = {}) {
                     selected = false,
                     onClick = {
                         scope.launch { drawerState.close() }
-                        //điều hướng sang màn hình Tài khoản sau này
+                        // TODO: điều hướng sang màn hình Tài khoản sau này
                     },
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
@@ -134,7 +147,7 @@ fun InventoryManagementScreen(onNavigateToAddBook: () -> Unit = {}) {
                     selected = false,
                     onClick = {
                         scope.launch { drawerState.close() }
-                        // điều hướng sang màn hình Cài đặt sau này
+                        // TODO: điều hướng sang màn hình Cài đặt sau này
                     },
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
@@ -162,7 +175,7 @@ fun InventoryManagementScreen(onNavigateToAddBook: () -> Unit = {}) {
                                 )
                             )
                         } else {
-                            Text("Trang chủ")
+                            Text("My Library ALFM")
                         }
                     },
                     navigationIcon = {
@@ -383,7 +396,7 @@ private fun BookReadingItem(book: Book, onClick: () -> Unit, onMarkRead: () -> U
                     onClick = onMarkRead,
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
                 ) {
-                    Text("Đánh dấu đã đọc xong")
+                    Text("Đã đọc xong")
                 }
             }
         }
