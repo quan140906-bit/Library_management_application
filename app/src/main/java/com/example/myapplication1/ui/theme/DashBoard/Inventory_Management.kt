@@ -36,31 +36,19 @@ private enum class BookFilter {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun InventoryManagementScreen() {
-    val repository = remember { BookRepository() }
+fun InventoryManagementScreen(
+    repository: BookRepository,
+    onNavigateToAddBook: () -> Unit
+) {
     var books by remember { mutableStateOf(repository.getAllBooks()) }
 
     var isSearching by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf(BookFilter.ALL) }
     var selectedBookId by remember { mutableStateOf<Int?>(null) }
-    var showAddBookScreen by remember { mutableStateOf(false) }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-
-    // Màn hình Thêm sách hiển thị riêng, thay cho toàn bộ nội dung bên dưới
-    if (showAddBookScreen) {
-        AddBookScreen(
-            onCancel = { showAddBookScreen = false },
-            onSave = { title, author, imageUrl, publishYear, genre ->
-                repository.addBook(title, author, imageUrl, publishYear, genre)
-                books = repository.getAllBooks()
-                showAddBookScreen = false
-            }
-        )
-        return
-    }
 
     val selectedBook = books.firstOrNull { it.id == selectedBookId }
 
@@ -125,7 +113,7 @@ fun InventoryManagementScreen() {
                     selected = false,
                     onClick = {
                         scope.launch { drawerState.close() }
-                        showAddBookScreen = true
+                        onNavigateToAddBook()
                     },
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )

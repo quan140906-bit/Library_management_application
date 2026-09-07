@@ -43,6 +43,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.myapplication1.data.BookRepository
+import com.example.myapplication1.ui.theme.DashBoard.AddBookScreen
 import com.example.myapplication1.ui.theme.DashBoard.InventoryManagementScreen
 
 class MainActivity : ComponentActivity() {
@@ -64,7 +66,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun ALFMApp() {
-
+    val repository = remember { BookRepository() }
     var currentScreen by remember {
         mutableStateOf("login")
     }
@@ -91,13 +93,18 @@ fun ALFMApp() {
 
         }
         "library" -> {
-            com.example.myapplication1.ui.theme.DashBoard.InventoryManagementScreen(
+            InventoryManagementScreen(
+                repository = repository,
                 onNavigateToAddBook = { currentScreen = "add_book" }
             )
         }
         "add_book" -> {
-            com.example.myapplication1.ui.theme.DashBoard.AddBookScreen(
-                onBackClick = { currentScreen = "library" }
+            AddBookScreen(
+                onCancel = { currentScreen = "library" },
+                onSave = { title, author, imageUrl, publishYear, genre ->
+                    repository.addBook(title, author, imageUrl, publishYear, genre)
+                    currentScreen = "library"
+                }
             )
         }
     }
