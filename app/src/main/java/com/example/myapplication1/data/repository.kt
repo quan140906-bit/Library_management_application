@@ -8,7 +8,7 @@ class UserRepository {
 
 class BookRepository {
     private val books = mutableListOf(
-        Book(1, "Đắc Nhân Tâm", "Dale Carnegie", BookStatus.READ),
+        Book(1, "Đắc Nhân Tâm", "Dale Carnegie", BookStatus.READ, imageUrl = "android.resource://com.example.myapplication1/drawable/dacnhantam"),
         Book(2, "Nhà Giả Kim", "Paulo Coelho", BookStatus.READ),
         Book(3, "Atomic Habits", "James Clear", BookStatus.READING),
         Book(4, "Deep Work", "Cal Newport", BookStatus.READING)
