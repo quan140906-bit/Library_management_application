@@ -1,124 +1,137 @@
 package com.example.myapplication1.ui.theme.DashBoard
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.myapplication1.data.Book
-import com.example.myapplication1.data.BookRepository
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddBookScreen(onBackClick: () -> Unit) {
-    val context = LocalContext.current
-    val repository = remember { BookRepository() }
-
-    // Các biến lưu trữ dữ liệu người dùng nhập vào
+fun AddBookScreen(
+    onBackClick: () -> Unit,
+    onSave: (title: String, author: String, imageUrl: String?, publishYear: Int?, genre: String?) -> Unit
+) {
     var title by remember { mutableStateOf("") }
     var author by remember { mutableStateOf("") }
+    var imageUrl by remember { mutableStateOf("") }
+    var publishYear by remember { mutableStateOf("") }
     var genre by remember { mutableStateOf("") }
-    var isbn by remember { mutableStateOf("") }
-    var quantity by remember { mutableStateOf("") }
-    var isSaving by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Thêm Sách Mới") },
+                title = { Text("Thêm sách") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF6750A4),
+                    containerColor = PrimaryPurple,
                     titleContentColor = Color.White,
                     navigationIconContentColor = Color.White
                 )
             )
         }
-    ) { paddingValues ->
+    ) { innerPadding ->
+
         Column(
             modifier = Modifier
-                .padding(paddingValues)
-                .padding(16.dp)
                 .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp)
         ) {
             OutlinedTextField(
-                value = title, onValueChange = { title = it },
-                label = { Text("Tên sách *") },
-                modifier = Modifier.fillMaxWidth()
+                value = title,
+                onValueChange = { title = it; errorMessage = "" },
+                label = { Text("Tiêu đề *") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
-            Spacer(modifier = Modifier.height(8.dp))
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             OutlinedTextField(
-                value = author, onValueChange = { author = it },
+                value = author,
+                onValueChange = { author = it; errorMessage = "" },
                 label = { Text("Tác giả *") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
-            Spacer(modifier = Modifier.height(8.dp))
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             OutlinedTextField(
-                value = genre, onValueChange = { genre = it },
-                label = { Text("Thể loại") },
-                modifier = Modifier.fillMaxWidth()
+                value = imageUrl,
+                onValueChange = { imageUrl = it },
+                label = { Text("Link hình ảnh (không bắt buộc)") },
+                placeholder = { Text("https://...") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
-            Spacer(modifier = Modifier.height(8.dp))
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             OutlinedTextField(
-                value = isbn, onValueChange = { isbn = it },
-                label = { Text("Mã ISBN") },
-                modifier = Modifier.fillMaxWidth()
+                value = publishYear,
+                onValueChange = { publishYear = it.filter { c -> c.isDigit() } },
+                label = { Text("Năm xuất bản (không bắt buộc)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
-            Spacer(modifier = Modifier.height(8.dp))
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             OutlinedTextField(
-                value = quantity, onValueChange = { quantity = it },
-                label = { Text("Số lượng") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
+                value = genre,
+                onValueChange = { genre = it },
+                label = { Text("Thể loại (không bắt buộc)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
+
+            if (errorMessage.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(errorMessage, color = Color.Red, style = MaterialTheme.typography.bodySmall)
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = {
-                    if (title.isBlank() || author.isBlank()) {
-                        Toast.makeText(context, "Vui lòng nhập tên sách và tác giả!", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    isSaving = true
-                    // Đóng gói dữ liệu thành object Book
-                    val newBook = Book(
-                        title = title, author = author, genre = genre,
-                        isbn = isbn, quantity = quantity.toIntOrNull() ?: 1
-                    )
-                    // Gọi hàm đẩy lên mạng
-                    repository.addBook(
-                        book = newBook,
-                        onSuccess = {
-                            isSaving = false
-                            Toast.makeText(context, "Thêm sách thành công!", Toast.LENGTH_SHORT).show()
-                            onBackClick() // Tự động quay lại trang chủ
-                        },
-                        onFailure = { e ->
-                            isSaving = false
-                            Toast.makeText(context, "Lỗi: ${e.message}", Toast.LENGTH_LONG).show()
+                    when {
+                        title.isBlank() -> errorMessage = "Vui lòng nhập tiêu đề"
+                        author.isBlank() -> errorMessage = "Vui lòng nhập tác giả"
+                        else -> {
+                            onSave(
+                                title.trim(),
+                                author.trim(),
+                                imageUrl.trim().ifBlank { null },
+                                publishYear.toIntOrNull(),
+                                genre.trim().ifBlank { null }
+                            )
                         }
-                    )
+                    }
                 },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                enabled = !isSaving
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple)
             ) {
-                Text(if (isSaving) "Đang lưu lên Firebase..." else "Lưu Sách", fontSize = 16.sp)
+                Text("Lưu sách")
             }
         }
     }

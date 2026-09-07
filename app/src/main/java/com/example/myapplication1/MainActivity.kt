@@ -43,13 +43,14 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.myapplication1.data.BookRepository
+import com.example.myapplication1.ui.theme.DashBoard.AddBookScreen
 import com.example.myapplication1.ui.theme.DashBoard.InventoryManagementScreen
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState) // Dòng này bắt buộc phải nằm ngay đầu tiên
-
+        super.onCreate(savedInstanceState)
 
         setContent {
             ALFMApp()
@@ -68,6 +69,9 @@ fun ALFMApp() {
     var currentScreen by remember {
         mutableStateOf("login")
     }
+
+    val repository = remember { BookRepository() }
+    var books by remember { mutableStateOf(repository.getAllBooks()) }
 
     when (currentScreen) {
 
@@ -88,16 +92,31 @@ fun ALFMApp() {
                     currentScreen = "login"
                 }
             )
-
         }
+
         "library" -> {
-            com.example.myapplication1.ui.theme.DashBoard.InventoryManagementScreen(
-                onNavigateToAddBook = { currentScreen = "add_book" }
+            InventoryManagementScreen(
+                books = books,
+                onMarkAsRead = { bookId ->
+                    repository.markAsRead(bookId)
+                    books = repository.getAllBooks()
+                },
+                onNavigateToAddBook = {
+                    currentScreen = "add_book"
+                }
             )
         }
+
         "add_book" -> {
-            com.example.myapplication1.ui.theme.DashBoard.AddBookScreen(
-                onBackClick = { currentScreen = "library" }
+            AddBookScreen(
+                onBackClick = {
+                    currentScreen = "library"
+                },
+                onSave = { title, author, imageUrl, publishYear, genre ->
+                    repository.addBook(title, author, imageUrl, publishYear, genre)
+                    books = repository.getAllBooks()
+                    currentScreen = "library"
+                }
             )
         }
     }
@@ -168,7 +187,6 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                // LOGO
                 Text(
                     text = "📚",
                     fontSize = 48.sp
@@ -199,7 +217,6 @@ fun LoginScreen(
                     modifier = Modifier.height(30.dp)
                 )
 
-                // EMAIL
                 OutlinedTextField(
                     value = email,
                     onValueChange = {
@@ -225,7 +242,6 @@ fun LoginScreen(
                     modifier = Modifier.height(16.dp)
                 )
 
-                // PASSWORD
                 OutlinedTextField(
                     value = password,
                     onValueChange = {
@@ -253,10 +269,10 @@ fun LoginScreen(
 
                     keyboardActions = KeyboardActions(
                         onDone = {
-                            if (password.isNotEmpty()) {
-                                message = "Bạn đã nhập mật khẩu"
+                            message = if (password.isNotEmpty()) {
+                                "Bạn đã nhập mật khẩu"
                             } else {
-                                message = "Vui lòng nhập mật khẩu"
+                                "Vui lòng nhập mật khẩu"
                             }
                         }
                     ),
@@ -282,7 +298,6 @@ fun LoginScreen(
                     shape = RoundedCornerShape(16.dp)
                 )
 
-                // QUÊN MẬT KHẨU
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
@@ -306,7 +321,6 @@ fun LoginScreen(
                     modifier = Modifier.height(8.dp)
                 )
 
-                // ĐĂNG NHẬP
                 Button(
                     onClick = {
 
@@ -322,7 +336,7 @@ fun LoginScreen(
                                     "Vui lòng nhập mật khẩu"
 
                                 else -> {
-                                    onLoginSuccess() // Đăng nhập k qua database, xóa đi khi xog database
+                                    onLoginSuccess()
                                     "Đăng nhập thành công"
                                 }
                             }
@@ -348,7 +362,6 @@ fun LoginScreen(
                     modifier = Modifier.height(12.dp)
                 )
 
-                // ĐĂNG KÝ
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -375,7 +388,6 @@ fun LoginScreen(
                     }
                 }
 
-                // MESSAGE
                 if (message.isNotEmpty()) {
 
                     Spacer(
@@ -485,7 +497,6 @@ fun RegisterScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
 
-                    // LOGO
                     Text(
                         text = "📚",
                         fontSize = 44.sp
@@ -516,7 +527,6 @@ fun RegisterScreen(
                         modifier = Modifier.height(25.dp)
                     )
 
-                    // HỌ VÀ TÊN
                     OutlinedTextField(
                         value = fullName,
                         onValueChange = {
@@ -542,7 +552,6 @@ fun RegisterScreen(
                         modifier = Modifier.height(13.dp)
                     )
 
-                    // EMAIL
                     OutlinedTextField(
                         value = email,
                         onValueChange = {
@@ -568,7 +577,6 @@ fun RegisterScreen(
                         modifier = Modifier.height(13.dp)
                     )
 
-                    // SỐ ĐIỆN THOẠI
                     OutlinedTextField(
                         value = phone,
                         onValueChange = {
@@ -596,7 +604,6 @@ fun RegisterScreen(
                         modifier = Modifier.height(13.dp)
                     )
 
-                    // MẬT KHẨU
                     OutlinedTextField(
                         value = password,
                         onValueChange = {
@@ -650,7 +657,6 @@ fun RegisterScreen(
                         modifier = Modifier.height(13.dp)
                     )
 
-                    // XÁC NHẬN MẬT KHẨU
                     OutlinedTextField(
                         value = confirmPassword,
                         onValueChange = {
@@ -678,10 +684,10 @@ fun RegisterScreen(
 
                         keyboardActions = KeyboardActions(
                             onDone = {
-                                if (password == confirmPassword) {
-                                    message = "Mật khẩu đã khớp"
+                                message = if (password == confirmPassword) {
+                                    "Mật khẩu đã khớp"
                                 } else {
-                                    message = "Mật khẩu chưa khớp"
+                                    "Mật khẩu chưa khớp"
                                 }
                             }
                         ),
@@ -714,7 +720,6 @@ fun RegisterScreen(
                         modifier = Modifier.height(22.dp)
                     )
 
-                    // ĐĂNG KÝ
                     Button(
                         onClick = {
 
@@ -769,7 +774,6 @@ fun RegisterScreen(
                         )
                     }
 
-                    // MESSAGE
                     if (message.isNotEmpty()) {
 
                         Spacer(
@@ -788,7 +792,6 @@ fun RegisterScreen(
                         modifier = Modifier.height(12.dp)
                     )
 
-                    // QUAY LẠI LOGIN
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
