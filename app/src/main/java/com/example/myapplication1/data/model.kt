@@ -35,6 +35,17 @@ data class Category(
 
 
 // =========================
+// BOOK STATUS
+// =========================
+
+enum class BookStatus {
+    READ,
+    READING,
+    UNREAD
+}
+
+
+// =========================
 // BOOK
 // =========================
 
@@ -44,10 +55,16 @@ data class Book(
     val isbn: String? = null,
     val tag: String? = null,
     val series: String? = null,
+
     val category: Category? = null,
     val author: Author? = null,
-    val quantity: Int,
-    val availableQuantity: Int
+
+    val quantity: Int = 1,
+    val availableQuantity: Int = 1,
+
+    // Tạm dùng cho UI Android
+    val status: BookStatus = BookStatus.UNREAD,
+    val imageUrl: String? = null
 )
 
 
@@ -60,7 +77,7 @@ data class Borrow(
     val member: Member? = null,
     val borrowDate: String? = null,
     val dueDate: String,
-    val status: String = "BORROWED"
+    val status: String = "BORROWING"
 )
 
 
