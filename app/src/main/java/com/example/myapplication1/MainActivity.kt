@@ -17,23 +17,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,21 +43,14 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.myapplication1.data.Author
-import com.example.myapplication1.data.AuthorRepository
-import com.example.myapplication1.data.Book
 import com.example.myapplication1.data.BookRepository
-import com.example.myapplication1.data.BookStatus
-import com.example.myapplication1.data.Category
-import com.example.myapplication1.data.CategoryRepository
+import com.example.myapplication1.data.Book
+import androidx.compose.runtime.LaunchedEffect
 import com.example.myapplication1.ui.theme.DashBoard.AddBookScreen
 import com.example.myapplication1.ui.theme.DashBoard.InventoryManagementScreen
 import kotlinx.coroutines.launch
-
-
-// ======================================================
-// MAIN ACTIVITY
-// ======================================================
+import com.example.myapplication1.data.AuthRepository
+import androidx.compose.runtime.rememberCoroutineScope
 
 class MainActivity : ComponentActivity() {
 
@@ -75,7 +65,7 @@ class MainActivity : ComponentActivity() {
 
 
 // ======================================================
-// MAIN APP
+// ALFM APP
 // ======================================================
 
 @Composable
@@ -85,233 +75,65 @@ fun ALFMApp() {
         mutableStateOf("login")
     }
 
-    val bookRepository = remember {
-        BookRepository()
+    val repository = remember { BookRepository() }
+    var books by remember { mutableStateOf(emptyList<Book>()) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(currentScreen) {
+        try {
+            books = repository.getAllBooks()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
-
-    val authorRepository = remember {
-        AuthorRepository()
-    }
-
-    val categoryRepository = remember {
-        CategoryRepository()
-    }
-
-    val coroutineScope = rememberCoroutineScope()
-
-    var books by remember {
-        mutableStateOf<List<Book>>(emptyList())
-    }
-
-    var isLoading by remember {
-        mutableStateOf(false)
-    }
-
-    var errorMessage by remember {
-        mutableStateOf("")
-    }
-
-
-    // ==================================================
-    // LOAD BOOKS FROM API
-    // ==================================================
-
-    suspend fun loadBooks() {
-
-        isLoading = true
-        errorMessage = ""
-
-        bookRepository
-            .getBooks()
-            .onSuccess { result ->
-
-                books = result.map { book ->
-
-                    // status và imageUrl hiện chưa nằm trong Oracle.
-                    // Gán mặc định để Dashboard không lỗi.
-
-                    book.copy(
-                        status = book.status ?: BookStatus.UNREAD
-                    )
-                }
-            }
-            .onFailure { error ->
-
-                errorMessage =
-                    error.message
-                        ?: "Không thể tải danh sách sách"
-
-                error.printStackTrace()
-            }
-
-        isLoading = false
-    }
-
-
-    // ==================================================
-    // LOAD WHEN APP STARTS
-    // ==================================================
-
-    LaunchedEffect(Unit) {
-
-        loadBooks()
-    }
-
-
-    // ==================================================
-    // SCREEN NAVIGATION
-    // ==================================================
 
     when (currentScreen) {
 
-
-        // ==================================================
-        // LOGIN
-        // ==================================================
-
         "login" -> {
-
             LoginScreen(
-
                 onRegisterClick = {
-
-                    currentScreen =
-                        "register"
+                    currentScreen = "register"
                 },
-
                 onLoginSuccess = {
-
-                    currentScreen =
-                        "library"
+                    currentScreen = "library"
                 }
             )
         }
-
-
-        // ==================================================
-        // REGISTER
-        // ==================================================
 
         "register" -> {
-
             RegisterScreen(
-
                 onLoginClick = {
-
-                    currentScreen =
-                        "login"
+                    currentScreen = "login"
                 }
             )
         }
 
-
-        // ==================================================
-        // LIBRARY DASHBOARD
-        // ==================================================
-
         "library" -> {
-
-            Box(
-                modifier =
-                    Modifier.fillMaxSize()
-            ) {
-
-                InventoryManagementScreen(
-
-                    books = books,
-
-                    onMarkAsRead = { bookId ->
-
-                        books =
-                            books.map { book ->
-
-                                if (
-                                    book.bookId?.toInt() ==
-                                    bookId
-                                ) {
-
-                                    book.copy(
-                                        status =
-                                            BookStatus.READ
-                                    )
-
-                                } else {
-
-                                    book
-                                }
-                            }
-                    },
-
-                    onNavigateToAddBook = {
-
-                        currentScreen =
-                            "add_book"
+            InventoryManagementScreen(
+                books = books,
+                onMarkAsRead = { bookId ->
+                    scope.launch {
+                        repository.markAsRead(bookId)
+                        books = repository.getAllBooks()
                     }
-                )
-
-
-                // ==================================================
-                // LOADING
-                // ==================================================
-
-                if (isLoading) {
-
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Color.Black.copy(
-                                        alpha = 0.15f
-                                    )
-                                ),
-
-                        contentAlignment =
-                            Alignment.Center
-                    ) {
-
-                        CircularProgressIndicator(
-                            color =
-                                Color(0xFF6750A4)
-                        )
-                    }
+                },
+                onNavigateToAddBook = {
+                    currentScreen = "add_book"
                 }
-            }
+            )
         }
-
-
-        // ==================================================
-        // ADD BOOK
-        // ==================================================
 
         "add_book" -> {
             AddBookScreen(
                 onBackClick = {
                     currentScreen = "library"
                 },
-                onSave = { title, authorName, imageUrl, publishYear, genre ->
-                    // Lưu tạm trực tiếp trong RAM, không gọi backend/database.
-                    val nextId =
-                        (books.mapNotNull { it.bookId }.maxOrNull() ?: 0L) + 1L
-
-                    val newBook = Book(
-                        bookId = nextId,
-                        title = title,
-                        isbn = null,
-                        tag = genre,
-                        series = publishYear?.toString(),
-                        category = genre
-                            ?.takeIf { it.isNotBlank() }
-                            ?.let { Category(categoryName = it) },
-                        author = Author(authorName = authorName),
-                        quantity = 1,
-                        availableQuantity = 1,
-                        status = BookStatus.UNREAD,
-                        imageUrl = imageUrl
-                    )
-
-                    books = books + newBook
-                    currentScreen = "library"
+                onSave = { title, author, imageUrl, publishYear, genre ->
+                    scope.launch {
+                        repository.addBook(title, author, imageUrl, publishYear, genre)
+                        books = repository.getAllBooks()
+                        currentScreen = "library"
+                    }
                 }
             )
         }
@@ -329,6 +151,13 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit
 ) {
 
+    val authRepository = remember { AuthRepository() }
+    val scope = rememberCoroutineScope()
+
+    var isLoading by remember {
+        mutableStateOf(false)
+    }
+
     var email by remember {
         mutableStateOf("")
     }
@@ -345,71 +174,42 @@ fun LoginScreen(
         mutableStateOf("")
     }
 
-    val primary =
-        Color(0xFF6750A4)
+    val primary = Color(0xFF6750A4)
 
-    val background =
-        Brush.verticalGradient(
-            colors =
-                listOf(
-                    Color(0xFFF4F0FF),
-                    Color(0xFFF9F8FC),
-                    Color.White
-                )
+    val background = Brush.verticalGradient(
+        colors = listOf(
+            Color(0xFFF4F0FF),
+            Color(0xFFF9F8FC),
+            Color.White
         )
+    )
 
     Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(
-                    background
-                ),
-
-        contentAlignment =
-            Alignment.Center
+        modifier = Modifier
+            .fillMaxSize()
+            .background(background),
+        contentAlignment = Alignment.Center
     ) {
 
         Card(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .widthIn(
-                        max = 400.dp
-                    )
-                    .padding(
-                        horizontal =
-                            22.dp
-                    ),
-
-            shape =
-                RoundedCornerShape(
-                    30.dp
-                ),
-
-            colors =
-                CardDefaults.cardColors(
-                    containerColor =
-                        Color.White
-                ),
-
-            elevation =
-                CardDefaults.cardElevation(
-                    defaultElevation =
-                        10.dp
-                )
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 400.dp)
+                .padding(horizontal = 22.dp),
+            shape = RoundedCornerShape(30.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White
+            ),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 10.dp
+            )
         ) {
 
             Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            28.dp
-                        ),
-
-                horizontalAlignment =
-                    Alignment.CenterHorizontally
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
                 Text(
@@ -418,415 +218,241 @@ fun LoginScreen(
                 )
 
                 Spacer(
-                    modifier =
-                        Modifier.height(
-                            12.dp
-                        )
+                    modifier = Modifier.height(12.dp)
                 )
 
                 Text(
-                    text =
-                        "Welcome to ALFM",
-
-                    fontSize =
-                        26.sp,
-
-                    fontWeight =
-                        FontWeight.Bold,
-
-                    color =
-                        Color(0xFF222222)
+                    text = "Welcome to ALFM",
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF222222)
                 )
 
                 Spacer(
-                    modifier =
-                        Modifier.height(
-                            5.dp
-                        )
+                    modifier = Modifier.height(5.dp)
                 )
 
                 Text(
-                    text =
-                        "Library Management",
-
-                    fontSize =
-                        14.sp,
-
-                    color =
-                        Color.Gray
+                    text = "Library Management",
+                    fontSize = 14.sp,
+                    color = Color.Gray
                 )
 
                 Spacer(
-                    modifier =
-                        Modifier.height(
-                            30.dp
-                        )
+                    modifier = Modifier.height(30.dp)
                 )
-
-
-                // ==================================================
-                // EMAIL
-                // ==================================================
 
                 OutlinedTextField(
-
-                    value =
-                        email,
-
+                    value = email,
                     onValueChange = {
-
                         email = it
                         message = ""
                     },
-
-                    modifier =
-                        Modifier.fillMaxWidth(),
-
+                    modifier = Modifier.fillMaxWidth(),
                     label = {
-
-                        Text(
-                            "Email"
-                        )
+                        Text("Email")
                     },
-
                     placeholder = {
-
-                        Text(
-                            "example@gmail.com"
-                        )
+                        Text("example@gmail.com")
                     },
-
-                    singleLine =
-                        true,
-
-                    keyboardOptions =
-                        KeyboardOptions(
-
-                            keyboardType =
-                                KeyboardType.Email,
-
-                            imeAction =
-                                ImeAction.Next
-                        ),
-
-                    shape =
-                        RoundedCornerShape(
-                            16.dp
-                        )
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next
+                    ),
+                    shape = RoundedCornerShape(16.dp)
                 )
-
 
                 Spacer(
-                    modifier =
-                        Modifier.height(
-                            16.dp
-                        )
+                    modifier = Modifier.height(16.dp)
                 )
 
-
-                // ==================================================
-                // PASSWORD
-                // ==================================================
-
                 OutlinedTextField(
-
-                    value =
-                        password,
-
+                    value = password,
                     onValueChange = {
-
                         password = it
                         message = ""
                     },
-
-                    modifier =
-                        Modifier.fillMaxWidth(),
-
+                    modifier = Modifier.fillMaxWidth(),
                     label = {
-
-                        Text(
-                            "Mật khẩu"
-                        )
+                        Text("Mật khẩu")
                     },
-
                     placeholder = {
-
-                        Text(
-                            "Nhập mật khẩu"
-                        )
+                        Text("Nhập mật khẩu")
                     },
-
-                    singleLine =
-                        true,
-
+                    singleLine = true,
                     visualTransformation =
-
-                        if (
-                            passwordVisible
-                        ) {
-
+                        if (passwordVisible)
                             VisualTransformation.None
+                        else
+                            PasswordVisualTransformation(),
 
-                        } else {
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done
+                    ),
 
-                            PasswordVisualTransformation()
-                        },
-
-                    keyboardOptions =
-                        KeyboardOptions(
-
-                            keyboardType =
-                                KeyboardType.Password,
-
-                            imeAction =
-                                ImeAction.Done
-                        ),
-
-                    keyboardActions =
-                        KeyboardActions(
-
-                            onDone = {
-
-                                message =
-
-                                    if (
-                                        password.isNotEmpty()
-                                    ) {
-
-                                        "Bạn đã nhập mật khẩu"
-
-                                    } else {
-
-                                        "Vui lòng nhập mật khẩu"
-                                    }
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            message = if (password.isNotEmpty()) {
+                                "Bạn đã nhập mật khẩu"
+                            } else {
+                                "Vui lòng nhập mật khẩu"
                             }
-                        ),
+                        }
+                    ),
 
                     trailingIcon = {
-
                         TextButton(
-
                             onClick = {
-
-                                passwordVisible =
-                                    !passwordVisible
+                                passwordVisible = !passwordVisible
                             }
-
                         ) {
-
                             Text(
                                 text =
-
-                                    if (
-                                        passwordVisible
-                                    ) {
-
+                                    if (passwordVisible)
                                         "Ẩn"
-
-                                    } else {
-
-                                        "Hiện"
-                                    },
-
-                                color =
-                                    primary,
-
-                                fontSize =
-                                    12.sp
+                                    else
+                                        "Hiện",
+                                color = primary,
+                                fontSize = 12.sp
                             )
                         }
                     },
 
-                    shape =
-                        RoundedCornerShape(
-                            16.dp
-                        )
+                    shape = RoundedCornerShape(16.dp)
                 )
 
-
                 Row(
-                    modifier =
-                        Modifier.fillMaxWidth(),
-
-                    horizontalArrangement =
-                        Arrangement.End
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
                 ) {
 
                     TextButton(
-
                         onClick = {
-
-                            message =
-                                "Chức năng quên mật khẩu"
+                            message = "Chức năng quên mật khẩu"
                         }
-
                     ) {
 
                         Text(
-                            text =
-                                "Quên mật khẩu?",
-
-                            color =
-                                primary,
-
-                            fontSize =
-                                13.sp
+                            text = "Quên mật khẩu?",
+                            color = primary,
+                            fontSize = 13.sp
                         )
                     }
                 }
 
-
                 Spacer(
-                    modifier =
-                        Modifier.height(
-                            8.dp
-                        )
+                    modifier = Modifier.height(8.dp)
                 )
-
-
-                // ==================================================
-                // LOGIN BUTTON
-                // ==================================================
 
                 Button(
-
                     onClick = {
 
-                        message =
+                        when {
+                            email.isBlank() -> {
+                                message = "Vui lòng nhập email"
+                            }
 
-                            when {
+                            !isValidEmail(email) -> {
+                                message = "Email không hợp lệ"
+                            }
 
-                                email.isBlank() ->
+                            password.isBlank() -> {
+                                message = "Vui lòng nhập mật khẩu"
+                            }
 
-                                    "Vui lòng nhập email"
+                            else -> {
 
+                                scope.launch {
 
-                                !isValidEmail(
-                                    email
-                                ) ->
+                                    isLoading = true
+                                    message = ""
 
-                                    "Email không hợp lệ"
+                                    val result = authRepository.login(
+                                        email = email,
+                                        password = password
+                                    )
 
+                                    isLoading = false
 
-                                password.isBlank() ->
+                                    result
+                                        .onSuccess { response ->
 
-                                    "Vui lòng nhập mật khẩu"
+                                            message = "Đăng nhập thành công!"
 
+                                            // Login thành công
+                                            onLoginSuccess()
+                                        }
+                                        .onFailure { error ->
 
-                                else -> {
-
-                                    onLoginSuccess()
-
-                                    "Đăng nhập thành công"
+                                            message =
+                                                error.message
+                                                    ?: "Đăng nhập thất bại"
+                                        }
                                 }
                             }
+                        }
                     },
-
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(
-                                55.dp
-                            ),
-
-                    shape =
-                        RoundedCornerShape(
-                            16.dp
-                        ),
-
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor =
-                                primary
-                        )
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(55.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = primary
+                    )
                 ) {
-
                     Text(
-                        text =
+                        text = if (isLoading)
+                            "Đang đăng nhập..."
+                        else
                             "Đăng nhập",
-
-                        fontSize =
-                            16.sp,
-
-                        fontWeight =
-                            FontWeight.Bold
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
 
-
                 Spacer(
-                    modifier =
-                        Modifier.height(
-                            12.dp
-                        )
+                    modifier = Modifier.height(12.dp)
                 )
 
-
                 Row(
-                    verticalAlignment =
-                        Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
 
                     Text(
-                        text =
-                            "Chưa có tài khoản?",
-
-                        color =
-                            Color.Gray,
-
-                        fontSize =
-                            13.sp
+                        text = "Chưa có tài khoản?",
+                        color = Color.Gray,
+                        fontSize = 13.sp
                     )
 
                     Spacer(
-                        modifier =
-                            Modifier.width(
-                                2.dp
-                            )
+                        modifier = Modifier.width(2.dp)
                     )
 
                     TextButton(
-                        onClick =
-                            onRegisterClick
+                        onClick = onRegisterClick
                     ) {
 
                         Text(
-                            text =
-                                "Đăng ký",
-
-                            color =
-                                primary,
-
-                            fontWeight =
-                                FontWeight.Bold
+                            text = "Đăng ký",
+                            color = primary,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-
-                if (
-                    message.isNotEmpty()
-                ) {
+                if (message.isNotEmpty()) {
 
                     Spacer(
-                        modifier =
-                            Modifier.height(
-                                5.dp
-                            )
+                        modifier = Modifier.height(5.dp)
                     )
 
                     Text(
-                        text =
-                            message,
-
-                        color =
-                            primary,
-
-                        fontSize =
-                            13.sp,
-
-                        fontWeight =
-                            FontWeight.Medium
+                        text = message,
+                        color = primary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
@@ -843,6 +469,12 @@ fun LoginScreen(
 fun RegisterScreen(
     onLoginClick: () -> Unit
 ) {
+    val authRepository = remember { AuthRepository() }
+    val scope = rememberCoroutineScope()
+
+    var isLoading by remember {
+        mutableStateOf(false)
+    }
 
     var fullName by remember {
         mutableStateOf("")
@@ -876,715 +508,410 @@ fun RegisterScreen(
         mutableStateOf("")
     }
 
-    val primary =
-        Color(0xFF6750A4)
+    val primary = Color(0xFF6750A4)
 
-    val background =
-        Brush.verticalGradient(
-            colors =
-                listOf(
-                    Color(0xFFF4F0FF),
-                    Color(0xFFF9F8FC),
-                    Color.White
-                )
+    val background = Brush.verticalGradient(
+        colors = listOf(
+            Color(0xFFF4F0FF),
+            Color(0xFFF9F8FC),
+            Color.White
         )
-
+    )
 
     Box(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(
-                    background
-                )
+        modifier = Modifier
+            .fillMaxSize()
+            .background(background)
     ) {
 
         Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .verticalScroll(
-                        rememberScrollState()
-                    )
-                    .padding(
-                        horizontal =
-                            22.dp,
-
-                        vertical =
-                            30.dp
-                    ),
-
-            horizontalAlignment =
-                Alignment.CenterHorizontally
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(
+                    rememberScrollState()
+                )
+                .padding(
+                    horizontal = 22.dp,
+                    vertical = 30.dp
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
             Card(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .widthIn(
-                            max = 400.dp
-                        ),
-
-                shape =
-                    RoundedCornerShape(
-                        30.dp
-                    ),
-
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor =
-                            Color.White
-                    ),
-
-                elevation =
-                    CardDefaults.cardElevation(
-                        defaultElevation =
-                            10.dp
-                    )
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 400.dp),
+                shape = RoundedCornerShape(30.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                ),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = 10.dp
+                )
             ) {
 
                 Column(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(
-                                26.dp
-                            ),
-
-                    horizontalAlignment =
-                        Alignment.CenterHorizontally
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(26.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
 
                     Text(
-                        text =
-                            "📚",
-
-                        fontSize =
-                            44.sp
+                        text = "📚",
+                        fontSize = 44.sp
                     )
 
                     Spacer(
-                        modifier =
-                            Modifier.height(
-                                10.dp
-                            )
+                        modifier = Modifier.height(10.dp)
                     )
 
                     Text(
-                        text =
-                            "Create Account",
-
-                        fontSize =
-                            27.sp,
-
-                        fontWeight =
-                            FontWeight.Bold,
-
-                        color =
-                            Color(0xFF222222)
+                        text = "Create Account",
+                        fontSize = 27.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF222222)
                     )
 
                     Spacer(
-                        modifier =
-                            Modifier.height(
-                                5.dp
-                            )
+                        modifier = Modifier.height(5.dp)
                     )
 
                     Text(
-                        text =
-                            "Join ALFM Library",
-
-                        fontSize =
-                            14.sp,
-
-                        color =
-                            Color.Gray
+                        text = "Join ALFM Library",
+                        fontSize = 14.sp,
+                        color = Color.Gray
                     )
 
                     Spacer(
-                        modifier =
-                            Modifier.height(
-                                25.dp
-                            )
+                        modifier = Modifier.height(25.dp)
                     )
-
-
-                    // ==================================================
-                    // FULL NAME
-                    // ==================================================
 
                     OutlinedTextField(
-
-                        value =
-                            fullName,
-
+                        value = fullName,
                         onValueChange = {
-
                             fullName = it
                             message = ""
                         },
-
-                        modifier =
-                            Modifier.fillMaxWidth(),
-
+                        modifier = Modifier.fillMaxWidth(),
                         label = {
-                            Text(
-                                "Họ và tên"
-                            )
+                            Text("Họ và tên")
                         },
-
                         placeholder = {
-                            Text(
-                                "Nguyen Van A"
-                            )
+                            Text("Nguyen Van A")
                         },
-
-                        singleLine =
-                            true,
-
-                        keyboardOptions =
-                            KeyboardOptions(
-
-                                keyboardType =
-                                    KeyboardType.Text,
-
-                                imeAction =
-                                    ImeAction.Next
-                            ),
-
-                        shape =
-                            RoundedCornerShape(
-                                15.dp
-                            )
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Text,
+                            imeAction = ImeAction.Next
+                        ),
+                        shape = RoundedCornerShape(15.dp)
                     )
-
 
                     Spacer(
-                        modifier =
-                            Modifier.height(
-                                13.dp
-                            )
+                        modifier = Modifier.height(13.dp)
                     )
 
-
-                    // ==================================================
-                    // EMAIL
-                    // ==================================================
-
                     OutlinedTextField(
-
-                        value =
-                            email,
-
+                        value = email,
                         onValueChange = {
-
                             email = it
                             message = ""
                         },
-
-                        modifier =
-                            Modifier.fillMaxWidth(),
-
+                        modifier = Modifier.fillMaxWidth(),
                         label = {
-                            Text(
-                                "Email"
-                            )
+                            Text("Email")
                         },
-
                         placeholder = {
-                            Text(
-                                "abcxyz@gmail.com"
-                            )
+                            Text("abcxyz@gmail.com")
                         },
-
-                        singleLine =
-                            true,
-
-                        keyboardOptions =
-                            KeyboardOptions(
-
-                                keyboardType =
-                                    KeyboardType.Email,
-
-                                imeAction =
-                                    ImeAction.Next
-                            ),
-
-                        shape =
-                            RoundedCornerShape(
-                                15.dp
-                            )
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Email,
+                            imeAction = ImeAction.Next
+                        ),
+                        shape = RoundedCornerShape(15.dp)
                     )
-
 
                     Spacer(
-                        modifier =
-                            Modifier.height(
-                                13.dp
-                            )
+                        modifier = Modifier.height(13.dp)
                     )
 
-
-                    // ==================================================
-                    // PHONE
-                    // ==================================================
-
                     OutlinedTextField(
-
-                        value =
-                            phone,
-
+                        value = phone,
                         onValueChange = {
-
-                            phone =
-                                it.filter { char ->
-                                    char.isDigit()
-                                }
-
+                            phone = it.filter { char ->
+                                char.isDigit()
+                            }
                             message = ""
                         },
-
-                        modifier =
-                            Modifier.fillMaxWidth(),
-
+                        modifier = Modifier.fillMaxWidth(),
                         label = {
-                            Text(
-                                "Số điện thoại"
-                            )
+                            Text("Số điện thoại")
                         },
-
                         placeholder = {
-                            Text(
-                                "09xxxxxxxx"
-                            )
+                            Text("09xxxxxxxx")
                         },
-
-                        singleLine =
-                            true,
-
-                        keyboardOptions =
-                            KeyboardOptions(
-
-                                keyboardType =
-                                    KeyboardType.Phone,
-
-                                imeAction =
-                                    ImeAction.Next
-                            ),
-
-                        shape =
-                            RoundedCornerShape(
-                                15.dp
-                            )
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Phone,
+                            imeAction = ImeAction.Next
+                        ),
+                        shape = RoundedCornerShape(15.dp)
                     )
-
 
                     Spacer(
-                        modifier =
-                            Modifier.height(
-                                13.dp
-                            )
+                        modifier = Modifier.height(13.dp)
                     )
 
-
-                    // ==================================================
-                    // PASSWORD
-                    // ==================================================
-
                     OutlinedTextField(
-
-                        value =
-                            password,
-
+                        value = password,
                         onValueChange = {
-
                             password = it
                             message = ""
                         },
-
-                        modifier =
-                            Modifier.fillMaxWidth(),
-
+                        modifier = Modifier.fillMaxWidth(),
                         label = {
-                            Text(
-                                "Mật khẩu"
-                            )
+                            Text("Mật khẩu")
                         },
-
                         placeholder = {
-                            Text(
-                                "Tối thiểu 6 ký tự"
-                            )
+                            Text("Tối thiểu 6 ký tự")
                         },
-
-                        singleLine =
-                            true,
-
+                        singleLine = true,
                         visualTransformation =
-
-                            if (
-                                passwordVisible
-                            ) {
-
+                            if (passwordVisible)
                                 VisualTransformation.None
+                            else
+                                PasswordVisualTransformation(),
 
-                            } else {
-
-                                PasswordVisualTransformation()
-                            },
-
-                        keyboardOptions =
-                            KeyboardOptions(
-
-                                keyboardType =
-                                    KeyboardType.Password,
-
-                                imeAction =
-                                    ImeAction.Next
-                            ),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Next
+                        ),
 
                         trailingIcon = {
 
                             TextButton(
-
                                 onClick = {
-
                                     passwordVisible =
                                         !passwordVisible
                                 }
-
                             ) {
 
                                 Text(
                                     text =
-
-                                        if (
-                                            passwordVisible
-                                        ) {
-
+                                        if (passwordVisible)
                                             "Ẩn"
-
-                                        } else {
-
-                                            "Hiện"
-                                        },
-
-                                    color =
-                                        primary,
-
-                                    fontSize =
-                                        12.sp
+                                        else
+                                            "Hiện",
+                                    color = primary,
+                                    fontSize = 12.sp
                                 )
                             }
                         },
 
-                        shape =
-                            RoundedCornerShape(
-                                15.dp
-                            )
+                        shape = RoundedCornerShape(15.dp)
                     )
-
 
                     Spacer(
-                        modifier =
-                            Modifier.height(
-                                13.dp
-                            )
+                        modifier = Modifier.height(13.dp)
                     )
 
-
-                    // ==================================================
-                    // CONFIRM PASSWORD
-                    // ==================================================
-
                     OutlinedTextField(
-
-                        value =
-                            confirmPassword,
-
+                        value = confirmPassword,
                         onValueChange = {
-
                             confirmPassword = it
                             message = ""
                         },
-
-                        modifier =
-                            Modifier.fillMaxWidth(),
-
+                        modifier = Modifier.fillMaxWidth(),
                         label = {
-                            Text(
-                                "Xác nhận mật khẩu"
-                            )
+                            Text("Xác nhận mật khẩu")
                         },
-
                         placeholder = {
-                            Text(
-                                "Nhập lại mật khẩu"
-                            )
+                            Text("Nhập lại mật khẩu")
                         },
-
-                        singleLine =
-                            true,
-
+                        singleLine = true,
                         visualTransformation =
-
-                            if (
-                                confirmPasswordVisible
-                            ) {
-
+                            if (confirmPasswordVisible)
                                 VisualTransformation.None
+                            else
+                                PasswordVisualTransformation(),
 
-                            } else {
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Done
+                        ),
 
-                                PasswordVisualTransformation()
-                            },
-
-                        keyboardOptions =
-                            KeyboardOptions(
-
-                                keyboardType =
-                                    KeyboardType.Password,
-
-                                imeAction =
-                                    ImeAction.Done
-                            ),
-
-                        keyboardActions =
-                            KeyboardActions(
-
-                                onDone = {
-
-                                    message =
-
-                                        if (
-                                            password ==
-                                            confirmPassword
-                                        ) {
-
-                                            "Mật khẩu đã khớp"
-
-                                        } else {
-
-                                            "Mật khẩu chưa khớp"
-                                        }
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                message = if (password == confirmPassword) {
+                                    "Mật khẩu đã khớp"
+                                } else {
+                                    "Mật khẩu chưa khớp"
                                 }
-                            ),
+                            }
+                        ),
 
                         trailingIcon = {
 
                             TextButton(
-
                                 onClick = {
-
                                     confirmPasswordVisible =
                                         !confirmPasswordVisible
                                 }
-
                             ) {
 
                                 Text(
                                     text =
-
-                                        if (
-                                            confirmPasswordVisible
-                                        ) {
-
+                                        if (confirmPasswordVisible)
                                             "Ẩn"
-
-                                        } else {
-
-                                            "Hiện"
-                                        },
-
-                                    color =
-                                        primary,
-
-                                    fontSize =
-                                        12.sp
+                                        else
+                                            "Hiện",
+                                    color = primary,
+                                    fontSize = 12.sp
                                 )
                             }
                         },
 
-                        shape =
-                            RoundedCornerShape(
-                                15.dp
-                            )
+                        shape = RoundedCornerShape(15.dp)
                     )
-
 
                     Spacer(
-                        modifier =
-                            Modifier.height(
-                                22.dp
-                            )
+                        modifier = Modifier.height(22.dp)
                     )
-
-
-                    // ==================================================
-                    // REGISTER BUTTON
-                    // ==================================================
 
                     Button(
-
                         onClick = {
 
-                            message =
+                            when {
 
-                                when {
-
-                                    fullName.isBlank() ->
-
-                                        "Vui lòng nhập họ và tên"
-
-
-                                    email.isBlank() ->
-
-                                        "Vui lòng nhập email"
-
-
-                                    !isValidEmail(
-                                        email
-                                    ) ->
-
-                                        "Email không hợp lệ"
-
-
-                                    phone.isBlank() ->
-
-                                        "Vui lòng nhập số điện thoại"
-
-
-                                    phone.length < 10 ->
-
-                                        "Số điện thoại không hợp lệ"
-
-
-                                    password.isBlank() ->
-
-                                        "Vui lòng nhập mật khẩu"
-
-
-                                    password.length < 6 ->
-
-                                        "Mật khẩu phải có ít nhất 6 ký tự"
-
-
-                                    confirmPassword.isBlank() ->
-
-                                        "Vui lòng xác nhận mật khẩu"
-
-
-                                    password !=
-                                            confirmPassword ->
-
-                                        "Mật khẩu xác nhận không khớp"
-
-
-                                    else ->
-
-                                        "Đăng ký thành công!"
+                                fullName.isBlank() -> {
+                                    message = "Vui lòng nhập họ và tên"
                                 }
+
+                                email.isBlank() -> {
+                                    message = "Vui lòng nhập email"
+                                }
+
+                                !isValidEmail(email) -> {
+                                    message = "Email không hợp lệ"
+                                }
+
+                                phone.isBlank() -> {
+                                    message = "Vui lòng nhập số điện thoại"
+                                }
+
+                                phone.length < 10 -> {
+                                    message = "Số điện thoại không hợp lệ"
+                                }
+
+                                password.isBlank() -> {
+                                    message = "Vui lòng nhập mật khẩu"
+                                }
+
+                                password.length < 6 -> {
+                                    message = "Mật khẩu phải có ít nhất 6 ký tự"
+                                }
+
+                                confirmPassword.isBlank() -> {
+                                    message = "Vui lòng xác nhận mật khẩu"
+                                }
+
+                                password != confirmPassword -> {
+                                    message = "Mật khẩu xác nhận không khớp"
+                                }
+
+                                else -> {
+
+                                    scope.launch {
+
+                                        isLoading = true
+                                        message = ""
+
+                                        val result = authRepository.register(
+                                            fullName = fullName,
+                                            email = email,
+                                            phone = phone,
+                                            password = password
+                                        )
+
+                                        isLoading = false
+
+                                        result
+                                            .onSuccess {
+
+                                                message =
+                                                    "Đăng ký thành công!"
+
+                                                // Chuyển về Login
+                                                onLoginClick()
+                                            }
+                                            .onFailure { error ->
+
+                                                message =
+                                                    error.message
+                                                        ?: "Đăng ký thất bại"
+                                            }
+                                    }
+                                }
+                            }
                         },
-
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .height(
-                                    55.dp
-                                ),
-
-                        shape =
-                            RoundedCornerShape(
-                                16.dp
-                            ),
-
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor =
-                                    primary
-                            )
+                        enabled = !isLoading,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(55.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = primary
+                        )
                     ) {
 
                         Text(
-                            text =
+                            text = if (isLoading)
+                                "Đang đăng ký..."
+                            else
                                 "Đăng ký",
-
-                            fontSize =
-                                16.sp,
-
-                            fontWeight =
-                                FontWeight.Bold
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
 
-
-                    if (
-                        message.isNotEmpty()
-                    ) {
+                    if (message.isNotEmpty()) {
 
                         Spacer(
-                            modifier =
-                                Modifier.height(
-                                    12.dp
-                                )
+                            modifier = Modifier.height(12.dp)
                         )
 
                         Text(
-                            text =
-                                message,
-
-                            fontSize =
-                                13.sp,
-
-                            fontWeight =
-                                FontWeight.Medium,
-
-                            color =
-                                primary
+                            text = message,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = primary
                         )
                     }
 
-
                     Spacer(
-                        modifier =
-                            Modifier.height(
-                                12.dp
-                            )
+                        modifier = Modifier.height(12.dp)
                     )
 
-
                     Row(
-                        verticalAlignment =
-                            Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
 
                         Text(
-                            text =
-                                "Đã có tài khoản?",
-
-                            color =
-                                Color.Gray,
-
-                            fontSize =
-                                13.sp
+                            text = "Đã có tài khoản?",
+                            color = Color.Gray,
+                            fontSize = 13.sp
                         )
 
                         TextButton(
-                            onClick =
-                                onLoginClick
+                            onClick = onLoginClick
                         ) {
 
                             Text(
-                                text =
-                                    "Đăng nhập",
-
-                                color =
-                                    primary,
-
-                                fontWeight =
-                                    FontWeight.Bold
+                                text = "Đăng nhập",
+                                color = primary,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -1596,17 +923,13 @@ fun RegisterScreen(
 
 
 // ======================================================
-// EMAIL VALIDATION
+// KIỂM TRA EMAIL
 // ======================================================
 
-fun isValidEmail(
-    email: String
-): Boolean {
+fun isValidEmail(email: String): Boolean {
 
     return android.util.Patterns
         .EMAIL_ADDRESS
-        .matcher(
-            email
-        )
+        .matcher(email)
         .matches()
 }
