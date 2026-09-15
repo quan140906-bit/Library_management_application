@@ -285,208 +285,33 @@ fun ALFMApp() {
         // ==================================================
 
         "add_book" -> {
-
             AddBookScreen(
-
                 onBackClick = {
-
-                    currentScreen =
-                        "library"
+                    currentScreen = "library"
                 },
+                onSave = { title, authorName, imageUrl, publishYear, genre ->
+                    // Lưu tạm trực tiếp trong RAM, không gọi backend/database.
+                    val nextId =
+                        (books.mapNotNull { it.bookId }.maxOrNull() ?: 0L) + 1L
 
-                onSave = {
-                        title,
-                        authorName,
-                        imageUrl,
-                        publishYear,
-                        genre ->
+                    val newBook = Book(
+                        bookId = nextId,
+                        title = title,
+                        isbn = null,
+                        tag = genre,
+                        series = publishYear?.toString(),
+                        category = genre
+                            ?.takeIf { it.isNotBlank() }
+                            ?.let { Category(categoryName = it) },
+                        author = Author(authorName = authorName),
+                        quantity = 1,
+                        availableQuantity = 1,
+                        status = BookStatus.UNREAD,
+                        imageUrl = imageUrl
+                    )
 
-
-                    coroutineScope.launch {
-
-                        isLoading = true
-                        errorMessage = ""
-
-                        try {
-
-                            // ==================================================
-                            // 1. TÌM / TẠO AUTHOR
-                            // ==================================================
-
-                            var author: Author? = null
-
-                            val authorsResult =
-                                authorRepository
-                                    .getAuthors()
-
-                            authorsResult
-                                .onSuccess { authors ->
-
-                                    author =
-                                        authors.firstOrNull {
-
-                                            it.authorName.equals(
-                                                authorName,
-                                                ignoreCase = true
-                                            )
-                                        }
-                                }
-
-
-                            // Nếu chưa có tác giả → tạo mới
-                            if (author == null) {
-
-                                val newAuthor =
-                                    Author(
-                                        authorName =
-                                            authorName
-                                    )
-
-                                authorRepository
-                                    .createAuthor(
-                                        newAuthor
-                                    )
-                                    .onSuccess {
-
-                                        author = it
-                                    }
-                                    .onFailure {
-
-                                        errorMessage =
-                                            "Không tạo được tác giả: ${it.message}"
-                                    }
-                            }
-
-
-                            // ==================================================
-                            // 2. TÌM / TẠO CATEGORY
-                            // ==================================================
-
-                            var category: Category? = null
-
-                            if (
-                                !genre.isNullOrBlank()
-                            ) {
-
-                                val categoryResult =
-                                    categoryRepository
-                                        .getCategories()
-
-                                categoryResult
-                                    .onSuccess { categories ->
-
-                                        category =
-                                            categories.firstOrNull {
-
-                                                it.categoryName.equals(
-                                                    genre,
-                                                    ignoreCase = true
-                                                )
-                                            }
-                                    }
-
-
-                                if (category == null) {
-
-                                    val newCategory =
-                                        Category(
-                                            categoryName =
-                                                genre
-                                        )
-
-                                    categoryRepository
-                                        .createCategory(
-                                            newCategory
-                                        )
-                                        .onSuccess {
-
-                                            category = it
-                                        }
-                                        .onFailure {
-
-                                            errorMessage =
-                                                "Không tạo được thể loại: ${it.message}"
-                                        }
-                                }
-                            }
-
-
-                            // ==================================================
-                            // 3. CREATE BOOK
-                            // ==================================================
-
-                            val newBook =
-                                Book(
-
-                                    bookId =
-                                        null,
-
-                                    title =
-                                        title,
-
-                                    isbn =
-                                        null,
-
-                                    tag =
-                                        genre,
-
-                                    series =
-                                        publishYear
-                                            ?.toString(),
-
-                                    category =
-                                        category,
-
-                                    author =
-                                        author,
-
-                                    quantity =
-                                        1,
-
-                                    availableQuantity =
-                                        1,
-
-                                    status =
-                                        BookStatus.UNREAD,
-
-                                    imageUrl =
-                                        imageUrl
-                                )
-
-
-                            bookRepository
-                                .createBook(
-                                    newBook
-                                )
-                                .onSuccess {
-
-                                    // Load lại từ Oracle
-                                    loadBooks()
-
-                                    currentScreen =
-                                        "library"
-                                }
-                                .onFailure { error ->
-
-                                    errorMessage =
-                                        "Không thêm được sách: ${error.message}"
-
-                                    error.printStackTrace()
-                                }
-
-                        } catch (e: Exception) {
-
-                            errorMessage =
-                                e.message
-                                    ?: "Có lỗi khi thêm sách"
-
-                            e.printStackTrace()
-
-                        } finally {
-
-                            isLoading = false
-                        }
-                    }
+                    books = books + newBook
+                    currentScreen = "library"
                 }
             )
         }

@@ -4,53 +4,33 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddBookScreen(
     onBackClick: () -> Unit,
@@ -62,7 +42,6 @@ fun AddBookScreen(
         genre: String?
     ) -> Unit
 ) {
-
     var title by remember { mutableStateOf("") }
     var author by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
@@ -70,26 +49,29 @@ fun AddBookScreen(
     var genre by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
 
-    // Mở thư viện ảnh
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         selectedImageUri = uri
     }
 
+    val pageBackground = Color(0xFFF7F7FB)
+    val textPrimary = Color(0xFF24232D)
+    val textSecondary = Color(0xFF777582)
+    val softPurple = Color(0xFFF0EBFF)
+
     Scaffold(
+        containerColor = pageBackground,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
                         text = "Thêm sách",
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.ExtraBold
                     )
                 },
                 navigationIcon = {
-                    IconButton(
-                        onClick = onBackClick
-                    ) {
+                    IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Quay lại"
@@ -104,287 +86,306 @@ fun AddBookScreen(
             )
         }
     ) { innerPadding ->
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF8F6FC))
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = 18.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
-            Text(
-                text = "Thông tin sách",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = PrimaryPurple
-            )
-
-            // =========================
-            // ẢNH BÌA SÁCH
-            // =========================
-
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.White
-                ),
-                elevation = CardDefaults.cardElevation(
-                    defaultElevation = 3.dp
-                )
+                shape = RoundedCornerShape(26.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
             ) {
-
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(18.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-
-                    Text(
-                        text = "Ảnh bìa sách",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    if (selectedImageUri != null) {
-
-                        AsyncImage(
-                            model = selectedImageUri,
-                            contentDescription = "Ảnh bìa sách",
-                            modifier = Modifier
-                                .size(180.dp)
-                                .clip(RoundedCornerShape(14.dp)),
-                            contentScale = ContentScale.Crop
+                        .background(
+                            Brush.linearGradient(
+                                listOf(PrimaryPurple, Color(0xFF5840B8))
+                            )
                         )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Button(
-                            onClick = {
-                                imagePicker.launch("image/*")
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = PrimaryPurple
-                            )
+                        .padding(20.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            modifier = Modifier.size(58.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            color = Color.White.copy(alpha = 0.16f)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.AddPhotoAlternate,
-                                contentDescription = null
-                            )
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            Text("Đổi ảnh")
-                        }
-
-                    } else {
-
-                        Box(
-                            modifier = Modifier
-                                .size(180.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(Color(0xFFEDE7F6)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-
+                            Box(contentAlignment = Alignment.Center) {
                                 Icon(
-                                    imageVector = Icons.Default.Image,
+                                    imageVector = Icons.Default.AutoStories,
                                     contentDescription = null,
-                                    modifier = Modifier.size(55.dp),
-                                    tint = PrimaryPurple
-                                )
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Text(
-                                    text = "Chưa có ảnh",
-                                    color = Color.Gray
+                                    tint = Color.White,
+                                    modifier = Modifier.size(31.dp)
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(Modifier.width(14.dp))
 
-                        Button(
-                            onClick = {
-                                imagePicker.launch("image/*")
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = PrimaryPurple
+                        Column {
+                            Text(
+                                "Thêm sách mới",
+                                color = Color.White,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.ExtraBold
                             )
-                        ) {
-
-                            Icon(
-                                imageVector = Icons.Default.AddPhotoAlternate,
-                                contentDescription = null
+                            Spacer(Modifier.height(3.dp))
+                            Text(
+                                "Điền thông tin cơ bản của cuốn sách",
+                                color = Color.White.copy(alpha = 0.78f),
+                                fontSize = 12.sp
                             )
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            Text("Chọn ảnh")
                         }
                     }
                 }
             }
 
-            // =========================
-            // TÊN SÁCH
-            // =========================
-
-            OutlinedTextField(
-                value = title,
-                onValueChange = {
-                    title = it
-                    errorMessage = ""
-                },
-                label = {
-                    Text("Tên sách *")
-                },
-                placeholder = {
-                    Text("Nhập tên sách")
-                },
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp)
-            )
-
-            // =========================
-            // TÁC GIẢ
-            // =========================
-
-            OutlinedTextField(
-                value = author,
-                onValueChange = {
-                    author = it
-                    errorMessage = ""
-                },
-                label = {
-                    Text("Tác giả *")
-                },
-                placeholder = {
-                    Text("Nhập tên tác giả")
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp)
-            )
-
-            // =========================
-            // THỂ LOẠI
-            // =========================
-
-            OutlinedTextField(
-                value = genre,
-                onValueChange = {
-                    genre = it
-                },
-                label = {
-                    Text("Thể loại")
-                },
-                placeholder = {
-                    Text("Ví dụ: Tiểu thuyết")
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp)
-            )
-
-            // =========================
-            // NĂM XUẤT BẢN
-            // =========================
-
-            OutlinedTextField(
-                value = publishYear,
-                onValueChange = {
-                    publishYear = it.filter { character ->
-                        character.isDigit()
-                    }
-                },
-                label = {
-                    Text("Năm xuất bản")
-                },
-                placeholder = {
-                    Text("Ví dụ: 2024")
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number
-                )
-            )
-
-            // =========================
-            // THÔNG BÁO LỖI
-            // =========================
-
-            if (errorMessage.isNotEmpty()) {
-
-                Text(
-                    text = errorMessage,
-                    color = Color.Red,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // =========================
-            // NÚT LƯU
-            // =========================
-
-            Button(
-                onClick = {
-
-                    when {
-                        title.isBlank() -> {
-                            errorMessage = "Vui lòng nhập tên sách"
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(15.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            modifier = Modifier.size(42.dp),
+                            shape = CircleShape,
+                            color = softPurple
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.AutoStories,
+                                    null,
+                                    tint = PrimaryPurple,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
                         }
-
-                        author.isBlank() -> {
-                            errorMessage = "Vui lòng nhập tác giả"
-                        }
-
-                        else -> {
-
-                            onSave(
-                                title.trim(),
-                                author.trim(),
-                                selectedImageUri?.toString(),
-                                publishYear.toIntOrNull(),
-                                genre.trim().ifBlank { null }
+                        Spacer(Modifier.width(11.dp))
+                        Column {
+                            Text(
+                                "Thông tin sách",
+                                color = textPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 17.sp
+                            )
+                            Text(
+                                "Tên sách và tác giả là bắt buộc",
+                                color = textSecondary,
+                                fontSize = 11.sp
                             )
                         }
                     }
+
+                    HorizontalDivider(color = Color(0xFFEEEEF3))
+
+                    PrettyBookField(
+                        title,
+                        { title = it; errorMessage = "" },
+                        "Tiêu đề *",
+                        "Nhập tên sách"
+                    )
+                    PrettyBookField(
+                        author,
+                        { author = it; errorMessage = "" },
+                        "Tác giả *",
+                        "Nhập tên tác giả"
+                    )
+                    PrettyBookField(
+                        genre,
+                        { genre = it },
+                        "Thể loại",
+                        "Ví dụ: Tiểu thuyết"
+                    )
+                    PrettyBookField(
+                        publishYear,
+                        {
+                            publishYear = it.filter(Char::isDigit)
+                        },
+                        "Năm xuất bản",
+                        "Ví dụ: 2024",
+                        KeyboardType.Number
+                    )
+                }
+            }
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(13.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            modifier = Modifier.size(42.dp),
+                            shape = CircleShape,
+                            color = softPurple
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.Image,
+                                    null,
+                                    tint = PrimaryPurple,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(11.dp))
+                        Column {
+                            Text(
+                                "Ảnh bìa",
+                                color = textPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 17.sp
+                            )
+                            Text(
+                                "Chọn ảnh trực tiếp từ thư viện máy",
+                                color = textSecondary,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = Color(0xFFEEEEF3))
+
+                    if (selectedImageUri != null) {
+                        AsyncImage(
+                            model = selectedImageUri,
+                            contentDescription = "Ảnh bìa sách",
+                            modifier = Modifier
+                                .size(width = 150.dp, height = 205.dp)
+                                .clip(RoundedCornerShape(18.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(width = 150.dp, height = 190.dp)
+                                .clip(RoundedCornerShape(18.dp))
+                                .background(softPurple)
+                                .clickable { imagePicker.launch("image/*") },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    Icons.Default.Image,
+                                    null,
+                                    tint = PrimaryPurple,
+                                    modifier = Modifier.size(48.dp)
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    "Chưa chọn ảnh",
+                                    color = textSecondary,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+
+                    Button(
+                        onClick = { imagePicker.launch("image/*") },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = softPurple,
+                            contentColor = PrimaryPurple
+                        ),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Icon(Icons.Default.AddPhotoAlternate, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (selectedImageUri == null) "Chọn ảnh từ máy" else "Đổi ảnh",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            if (errorMessage.isNotBlank()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(15.dp),
+                    color = Color(0xFFFFECEC)
+                ) {
+                    Text(
+                        errorMessage,
+                        modifier = Modifier.padding(13.dp),
+                        color = Color(0xFFB3261E),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            Button(
+                onClick = {
+                    when {
+                        title.isBlank() ->
+                            errorMessage = "Vui lòng nhập tiêu đề"
+
+                        author.isBlank() ->
+                            errorMessage = "Vui lòng nhập tác giả"
+
+                        else -> onSave(
+                            title.trim(),
+                            author.trim(),
+                            selectedImageUri?.toString(),
+                            publishYear.toIntOrNull(),
+                            genre.trim().ifBlank { null }
+                        )
+                    }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(54.dp),
-                shape = RoundedCornerShape(15.dp),
+                modifier = Modifier.fillMaxWidth().height(58.dp),
+                shape = RoundedCornerShape(18.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = PrimaryPurple
                 )
             ) {
-
                 Text(
-                    text = "Lưu sách",
-                    fontWeight = FontWeight.Bold
+                    "Lưu sách",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.ExtraBold
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(Modifier.height(15.dp))
         }
     }
+}
+
+@Composable
+private fun PrettyBookField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    placeholder: String,
+    keyboardType: KeyboardType = KeyboardType.Text
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text(label) },
+        placeholder = { Text(placeholder) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        shape = RoundedCornerShape(16.dp)
+    )
 }
