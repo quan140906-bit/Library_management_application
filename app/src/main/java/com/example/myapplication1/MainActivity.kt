@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
 
+import com.example.myapplication1.ui.theme.DashBoard.AiSearchScreen
 import com.example.myapplication1.data.BookRepository
 import com.example.myapplication1.data.Book
 import androidx.compose.runtime.LaunchedEffect
@@ -260,6 +261,12 @@ fun ALFMApp() {
 
                         currentScreen =
                             "add_book"
+                    },
+
+                    onNavigateToAiSearch = {
+
+                        currentScreen =
+                            "ai_search"
                     }
                 )
             }
@@ -275,9 +282,7 @@ fun ALFMApp() {
             AddBookScreen(
 
                 onBackClick = {
-
-                    currentScreen =
-                        "library"
+                    currentScreen = "library"
                 },
 
                 onSave = {
@@ -291,35 +296,82 @@ fun ALFMApp() {
 
                         try {
 
-                            repository.addBook(
+                            // ==========================================
+                            // GỌI API THÊM SÁCH
+                            // ==========================================
 
-                                title =
-                                    title,
-
-                                author =
-                                    author,
-
-                                imageUrl =
-                                    imageUrl,
-
-                                publishYear =
-                                    publishYear,
-
-                                genre =
-                                    genre
+                            val result = repository.addBook(
+                                title = title,
+                                author = author,
+                                imageUrl = imageUrl,
+                                publishYear = publishYear,
+                                genre = genre
                             )
 
-                            books =
-                                repository.getAllBooks()
 
-                            currentScreen =
-                                "library"
+                            // ==========================================
+                            // CHỈ RELOAD KHI THÊM THÀNH CÔNG
+                            // ==========================================
+
+                            result
+                                .onSuccess { newBook ->
+
+                                    println(
+                                        "ADD BOOK SUCCESS: ${newBook.title}"
+                                    )
+
+                                    try {
+
+                                        books =
+                                            repository.getAllBooks()
+
+                                        currentScreen =
+                                            "library"
+
+                                    } catch (e: Exception) {
+
+                                        println(
+                                            "RELOAD BOOK ERROR: ${e.message}"
+                                        )
+
+                                        e.printStackTrace()
+                                    }
+                                }
+
+                                .onFailure { error ->
+
+                                    println(
+                                        "ADD BOOK FAILED: ${error.message}"
+                                    )
+
+                                    error.printStackTrace()
+                                }
 
                         } catch (e: Exception) {
+
+                            println(
+                                "ADD BOOK ERROR: ${e.message}"
+                            )
 
                             e.printStackTrace()
                         }
                     }
+                }
+            )
+        }
+
+        // ==================================================
+        // AI SEARCH
+        // ==================================================
+
+        "ai_search" -> {
+
+            AiSearchScreen(
+
+                onBackClick = {
+
+                    currentScreen =
+                        "library"
                 }
             )
         }

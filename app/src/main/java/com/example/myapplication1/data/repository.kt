@@ -586,33 +586,52 @@ class BookRepository {
 
         return try {
 
-            // ------------------------------------------------
-            // Tìm tác giả theo tên
-            // ------------------------------------------------
+            // ========================================================
+            // 1. KIỂM TRA TÊN TÁC GIẢ
+            // ========================================================
 
-            val authors =
-                authorApi.getAuthors()
+            val authorName = author.trim()
 
-            val selectedAuthor =
-                authors.firstOrNull {
-                    it.authorName.equals(
-                        author.trim(),
-                        ignoreCase = true
-                    )
-                }
-
-            if (selectedAuthor == null) {
-
+            if (authorName.isBlank()) {
                 return Result.failure(
-                    Exception(
-                        "Không tìm thấy tác giả \"$author\" trong hệ thống"
-                    )
+                    Exception("Vui lòng nhập tên tác giả")
                 )
             }
 
-            // ------------------------------------------------
-            // Tìm thể loại theo tên
-            // ------------------------------------------------
+
+            // ========================================================
+            // 2. TÌM TÁC GIẢ TRONG DATABASE
+            // ========================================================
+
+            val authors = authorApi.getAuthors()
+
+            var selectedAuthor = authors.firstOrNull {
+                it.authorName.equals(
+                    authorName,
+                    ignoreCase = true
+                )
+            }
+
+
+            // ========================================================
+            // 3. KHÔNG CÓ TÁC GIẢ -> TẠO TÁC GIẢ MỚI
+            // ========================================================
+
+            if (selectedAuthor == null) {
+
+                val newAuthor = Author(
+                    authorId = null,
+                    authorName = authorName
+                )
+
+                selectedAuthor =
+                    authorApi.createAuthor(newAuthor)
+            }
+
+
+            // ========================================================
+            // 4. TÌM CATEGORY
+            // ========================================================
 
             val categories =
                 categoryApi.getCategories()
@@ -626,9 +645,10 @@ class BookRepository {
                     )
                 }
 
-            // ------------------------------------------------
-            // Tạo request gửi Spring Boot
-            // ------------------------------------------------
+
+            // ========================================================
+            // 5. TẠO REQUEST SÁCH
+            // ========================================================
 
             val request = BookRequest(
 
@@ -657,16 +677,18 @@ class BookRepository {
                 imageUrl = imageUrl
             )
 
-            // ------------------------------------------------
-            // POST → Spring Boot → Oracle
-            // ------------------------------------------------
+
+            // ========================================================
+            // 6. POST SÁCH -> SPRING BOOT -> ORACLE
+            // ========================================================
 
             val response =
                 api.createBook(request)
 
-            // ------------------------------------------------
-            // Convert response về Book cho UI
-            // ------------------------------------------------
+
+            // ========================================================
+            // 7. RESPONSE -> BOOK
+            // ========================================================
 
             val book =
                 convertResponseToBook(response)
@@ -690,7 +712,6 @@ class BookRepository {
             )
         }
     }
-
     // ========================================================
     // MARK AS READ
     // ========================================================

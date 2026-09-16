@@ -158,6 +158,7 @@ fun InventoryManagementScreen(
     books: List<Book>,
     onMarkAsRead: (Int) -> Unit,
     onNavigateToAddBook: () -> Unit,
+    onNavigateToAiSearch: () -> Unit,
     memberId: Long
 ) {
 
@@ -352,40 +353,66 @@ fun InventoryManagementScreen(
 
                 if (currentPage == DashboardPage.HOME) {
 
-                    FloatingActionButton(
-
-                        onClick =
-                            onNavigateToAddBook,
-
-                        modifier =
-                            Modifier
-                                .size(64.dp)
-                                .shadow(
-                                    elevation = 12.dp,
-                                    shape = CircleShape
-                                ),
-
-                        containerColor =
-                            PrimaryPurple,
-
-                        contentColor =
-                            Color.White,
-
-                        shape =
-                            CircleShape
-
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
 
-                        Icon(
-                            imageVector =
-                                Icons.Default.Add,
+                        FloatingActionButton(
+                            onClick = onNavigateToAiSearch,
+                            modifier =
+                                Modifier
+                                    .size(56.dp)
+                                    .shadow(
+                                        elevation = 10.dp,
+                                        shape = CircleShape
+                                    ),
+                            containerColor = DeepPurple,
+                            contentColor = Color.White,
+                            shape = CircleShape
+                        ) {
+                            Text(
+                                text = "AI",
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 15.sp
+                            )
+                        }
 
-                            contentDescription =
-                                "Thêm sách",
+                        FloatingActionButton(
+
+                            onClick =
+                                onNavigateToAddBook,
 
                             modifier =
-                                Modifier.size(32.dp)
-                        )
+                                Modifier
+                                    .size(64.dp)
+                                    .shadow(
+                                        elevation = 12.dp,
+                                        shape = CircleShape
+                                    ),
+
+                            containerColor =
+                                PrimaryPurple,
+
+                            contentColor =
+                                Color.White,
+
+                            shape =
+                                CircleShape
+
+                        ) {
+
+                            Icon(
+                                imageVector =
+                                    Icons.Default.Add,
+
+                                contentDescription =
+                                    "Thêm sách",
+
+                                modifier =
+                                    Modifier.size(32.dp)
+                            )
+                        }
                     }
                 }
             }

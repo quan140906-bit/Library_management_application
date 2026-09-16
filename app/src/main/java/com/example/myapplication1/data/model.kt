@@ -57,7 +57,7 @@ data class Member(
 // ============================================================
 
 data class Author(
-    val authorId: Long,
+    val authorId: Long?,
     val authorName: String
 )
 
