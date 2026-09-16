@@ -254,26 +254,68 @@ class MemberRepository {
     private val api = RetrofitClient.memberApi
 
     suspend fun getAllMembers(): List<Member> {
-        return api.getMembers()
+        return api.getAllMembers()
     }
 
-    suspend fun getMember(id: Long): Member {
-        return api.getMember(id)
+    suspend fun getMember(
+        memberId: Long
+    ): Member {
+        return api.getMember(memberId)
     }
 
-    suspend fun createMember(member: Member): Member {
-        return api.createMember(member)
+    suspend fun createMember(
+        request: Member
+    ): Member {
+        return api.createMember(request)
     }
 
     suspend fun updateMember(
-        id: Long,
-        member: Member
-    ): Member {
-        return api.updateMember(id, member)
+        memberId: Long,
+        fullName: String,
+        email: String,
+        phone: String
+    ): Result<Member> {
+
+        return try {
+
+            val request = Member(
+                memberId = memberId,
+                fullName = fullName,
+                email = email,
+                phone = phone,
+                registerDate = "",
+                status = "ACTIVE"
+            )
+
+            val response =
+                api.updateMember(
+                    memberId,
+                    request
+                )
+
+            Result.success(response)
+
+        } catch (e: Exception) {
+
+            Result.failure(e)
+        }
     }
 
-    suspend fun deleteMember(id: Long) {
-        api.deleteMember(id)
+    suspend fun deleteMember(
+        memberId: Long
+    ): Boolean {
+
+        return try {
+
+            val response =
+                api.deleteMember(memberId)
+
+            response.isSuccessful
+
+        } catch (e: Exception) {
+
+            false
+        }
     }
 }
 
@@ -351,29 +393,188 @@ class CategoryRepository {
 class BookRepository {
 
     private val api = RetrofitClient.bookApi
+    private val authorApi = RetrofitClient.authorApi
+    private val categoryApi = RetrofitClient.categoryApi
+
+    // ========================================================
+    // GET ALL BOOKS
+    // ========================================================
 
     suspend fun getAllBooks(): List<Book> {
-        return api.getBooks()
+
+        val response = api.getBooks()
+
+        return response.map { book ->
+
+            val author =
+                book.authorId?.let { id ->
+                    try {
+                        authorApi.getAuthor(id)
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+
+            val category =
+                book.categoryId?.let { id ->
+                    try {
+                        categoryApi.getCategory(id)
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+
+            Book(
+                bookId = book.bookId,
+                title = book.title,
+                isbn = book.isbn,
+                tag = book.tag,
+                series = book.series,
+                category = category,
+                author = author,
+                quantity = book.quantity,
+                availableQuantity = book.availableQuantity,
+                imageUrl = book.imageUrl,
+                publishYear = book.publishYear,
+                status = BookStatus.UNREAD
+            )
+        }
     }
+
+    // ========================================================
+    // GET ONE BOOK
+    // ========================================================
 
     suspend fun getBook(id: Long): Book {
-        return api.getBook(id)
+
+        val response = api.getBook(id)
+
+        val author =
+            response.authorId?.let {
+                try {
+                    authorApi.getAuthor(it)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+
+        val category =
+            response.categoryId?.let {
+                try {
+                    categoryApi.getCategory(it)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+
+        return Book(
+            bookId = response.bookId,
+            title = response.title,
+            isbn = response.isbn,
+            tag = response.tag,
+            series = response.series,
+            category = category,
+            author = author,
+            quantity = response.quantity,
+            availableQuantity = response.availableQuantity,
+            imageUrl = response.imageUrl,
+            publishYear = response.publishYear,
+            status = BookStatus.UNREAD
+        )
     }
 
+    // ========================================================
+    // CREATE BOOK
+    // ========================================================
+
     suspend fun createBook(book: Book): Book {
-        return api.createBook(book)
+
+        val request = BookRequest(
+
+            // Không gửi ID khi tạo sách
+            bookId = null,
+
+            title = book.title,
+
+            isbn = book.isbn,
+
+            tag = book.tag,
+
+            series = book.series,
+
+            categoryId = book.category?.categoryId,
+
+            authorId = book.author?.authorId,
+
+            quantity = book.quantity,
+
+            availableQuantity = book.availableQuantity,
+
+            publishYear = book.publishYear,
+
+            imageUrl = book.imageUrl
+        )
+
+        val response = api.createBook(request)
+
+        return convertResponseToBook(response)
     }
+
+    // ========================================================
+    // UPDATE BOOK
+    // ========================================================
 
     suspend fun updateBook(
         id: Long,
         book: Book
     ): Book {
-        return api.updateBook(id, book)
+
+        val request = BookRequest(
+
+            bookId = id,
+
+            title = book.title,
+
+            isbn = book.isbn,
+
+            tag = book.tag,
+
+            series = book.series,
+
+            categoryId = book.category?.categoryId,
+
+            authorId = book.author?.authorId,
+
+            quantity = book.quantity,
+
+            availableQuantity = book.availableQuantity,
+
+            publishYear = book.publishYear,
+
+            imageUrl = book.imageUrl
+        )
+
+        val response =
+            api.updateBook(
+                id,
+                request
+            )
+
+        return convertResponseToBook(response)
     }
 
+    // ========================================================
+    // DELETE BOOK
+    // ========================================================
+
     suspend fun deleteBook(id: Long) {
+
         api.deleteBook(id)
     }
+
+    // ========================================================
+    // ADD BOOK FROM ADD BOOK SCREEN
+    // ========================================================
 
     suspend fun addBook(
         title: String,
@@ -381,55 +582,190 @@ class BookRepository {
         imageUrl: String?,
         publishYear: Int?,
         genre: String?
-    ) {
+    ): Result<Book> {
 
-        val book = Book(
-            bookId = 0L,
-            title = title,
-            isbn = null,
-            tag = null,
-            series = null,
-            category = null,
-            author = Author(
-                0L,
-                author
-            ),
-            quantity = 1,
-            availableQuantity = 1,
-            imageUrl = imageUrl,
-            status = BookStatus.READING
-        )
+        return try {
 
-        try {
+            // ------------------------------------------------
+            // Tìm tác giả theo tên
+            // ------------------------------------------------
 
-            api.createBook(book)
+            val authors =
+                authorApi.getAuthors()
 
-        } catch (e: Exception) {
+            val selectedAuthor =
+                authors.firstOrNull {
+                    it.authorName.equals(
+                        author.trim(),
+                        ignoreCase = true
+                    )
+                }
 
-            e.printStackTrace()
-        }
-    }
+            if (selectedAuthor == null) {
 
-    suspend fun markAsRead(
-        bookId: Int
-    ) {
+                return Result.failure(
+                    Exception(
+                        "Không tìm thấy tác giả \"$author\" trong hệ thống"
+                    )
+                )
+            }
 
-        try {
+            // ------------------------------------------------
+            // Tìm thể loại theo tên
+            // ------------------------------------------------
+
+            val categories =
+                categoryApi.getCategories()
+
+            val selectedCategory =
+                categories.firstOrNull {
+
+                    it.categoryName.equals(
+                        genre?.trim(),
+                        ignoreCase = true
+                    )
+                }
+
+            // ------------------------------------------------
+            // Tạo request gửi Spring Boot
+            // ------------------------------------------------
+
+            val request = BookRequest(
+
+                bookId = null,
+
+                title = title.trim(),
+
+                isbn = null,
+
+                tag = genre?.trim(),
+
+                series = null,
+
+                categoryId =
+                    selectedCategory?.categoryId,
+
+                authorId =
+                    selectedAuthor.authorId,
+
+                quantity = 1,
+
+                availableQuantity = 1,
+
+                publishYear = publishYear,
+
+                imageUrl = imageUrl
+            )
+
+            // ------------------------------------------------
+            // POST → Spring Boot → Oracle
+            // ------------------------------------------------
+
+            val response =
+                api.createBook(request)
+
+            // ------------------------------------------------
+            // Convert response về Book cho UI
+            // ------------------------------------------------
 
             val book =
-                api.getBook(bookId.toLong())
+                convertResponseToBook(response)
 
-            api.updateBook(
-                bookId.toLong(),
-                book.copy(
-                    status = BookStatus.READ
+            Result.success(book)
+
+        } catch (e: java.io.IOException) {
+
+            Result.failure(
+                Exception(
+                    "Không thể kết nối đến máy chủ"
                 )
             )
 
         } catch (e: Exception) {
 
-            e.printStackTrace()
+            Result.failure(
+                Exception(
+                    e.message ?: "Thêm sách thất bại"
+                )
+            )
         }
+    }
+
+    // ========================================================
+    // MARK AS READ
+    // ========================================================
+
+    suspend fun markAsRead(
+        bookId: Int
+    ) {
+
+        /*
+         * BookStatus là trạng thái UI Android.
+         *
+         * LIB_BOOKS hiện tại không có cột STATUS,
+         * nên không gửi READ xuống Oracle.
+         *
+         * Không được gọi PUT với:
+         *
+         * status = BookStatus.READ
+         *
+         * vì STATUS không tồn tại trong LIB_BOOKS.
+         */
+    }
+
+    // ========================================================
+    // CONVERT API RESPONSE → UI BOOK
+    // ========================================================
+
+    private suspend fun convertResponseToBook(
+        response: BookResponse
+    ): Book {
+
+        val author =
+            response.authorId?.let {
+                try {
+                    authorApi.getAuthor(it)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+
+        val category =
+            response.categoryId?.let {
+                try {
+                    categoryApi.getCategory(it)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+
+        return Book(
+
+            bookId = response.bookId,
+
+            title = response.title,
+
+            isbn = response.isbn,
+
+            tag = response.tag,
+
+            series = response.series,
+
+            category = category,
+
+            author = author,
+
+            quantity = response.quantity,
+
+            availableQuantity =
+                response.availableQuantity,
+
+            imageUrl = response.imageUrl,
+
+            publishYear = response.publishYear,
+
+            status = BookStatus.UNREAD
+        )
     }
 }
 

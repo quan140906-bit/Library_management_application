@@ -62,7 +62,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
@@ -78,6 +77,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -95,6 +95,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -102,6 +103,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.myapplication1.data.Book
 import com.example.myapplication1.data.BookStatus
+import com.example.myapplication1.data.MemberRepository
 import kotlinx.coroutines.launch
 
 
@@ -123,6 +125,7 @@ private val TextSecondary = Color(0xFF777783)
 
 private val SuccessGreen = Color(0xFF2DA66A)
 private val WarningOrange = Color(0xFFF39A3C)
+
 private val SoftGreen = Color(0xFFE8F7EF)
 private val SoftOrange = Color(0xFFFFF1E3)
 
@@ -154,7 +157,8 @@ private enum class BookFilter {
 fun InventoryManagementScreen(
     books: List<Book>,
     onMarkAsRead: (Int) -> Unit,
-    onNavigateToAddBook: () -> Unit
+    onNavigateToAddBook: () -> Unit,
+    memberId: Long
 ) {
 
     var currentPage by remember {
@@ -237,7 +241,10 @@ fun InventoryManagementScreen(
             .filter { book ->
 
                 when (selectedFilter) {
-                    BookFilter.ALL -> true
+
+                    BookFilter.ALL ->
+                        true
+
                     BookFilter.READING ->
                         book.status == BookStatus.READING
 
@@ -336,8 +343,7 @@ fun InventoryManagementScreen(
                             searchQuery = ""
                         }
 
-                        searchMode =
-                            !searchMode
+                        searchMode = !searchMode
                     }
                 )
             },
@@ -371,9 +377,14 @@ fun InventoryManagementScreen(
                     ) {
 
                         Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Thêm sách",
-                            modifier = Modifier.size(32.dp)
+                            imageVector =
+                                Icons.Default.Add,
+
+                            contentDescription =
+                                "Thêm sách",
+
+                            modifier =
+                                Modifier.size(32.dp)
                         )
                     }
                 }
@@ -450,6 +461,9 @@ fun InventoryManagementScreen(
                         modifier =
                             Modifier.padding(padding),
 
+                        memberId =
+                            memberId,
+
                         totalBooks =
                             totalBooks,
 
@@ -465,7 +479,6 @@ fun InventoryManagementScreen(
                 DashboardPage.SETTINGS -> {
 
                     PremiumSettingsPage(
-
                         modifier =
                             Modifier.padding(padding)
                     )
@@ -473,10 +486,6 @@ fun InventoryManagementScreen(
             }
         }
 
-
-        // ==================================================
-        // BOOK DETAIL
-        // ==================================================
 
         selectedBook?.let { book ->
 
@@ -509,7 +518,7 @@ fun InventoryManagementScreen(
 
 
 // ======================================================
-// PREMIUM DRAWER
+// DRAWER
 // ======================================================
 
 @Composable
@@ -519,41 +528,29 @@ private fun PremiumDrawer(
 ) {
 
     ModalDrawerSheet(
-        drawerContainerColor =
-            SurfaceWhite
+        drawerContainerColor = SurfaceWhite
     ) {
 
         Column(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .padding(
-                        horizontal = 14.dp
-                    )
+                    .padding(horizontal = 14.dp)
         ) {
 
             Spacer(
-                modifier =
-                    Modifier.height(28.dp)
+                modifier = Modifier.height(28.dp)
             )
-
-
-            // ==================================================
-            // BRAND
-            // ==================================================
 
             Row(
                 modifier =
-                    Modifier.padding(
-                        horizontal = 10.dp
-                    ),
+                    Modifier.padding(horizontal = 10.dp),
 
                 verticalAlignment =
                     Alignment.CenterVertically
             ) {
 
                 Box(
-
                     modifier =
                         Modifier
                             .size(56.dp)
@@ -572,14 +569,14 @@ private fun PremiumDrawer(
 
                     contentAlignment =
                         Alignment.Center
-
                 ) {
 
                     Icon(
                         imageVector =
                             Icons.Default.MenuBook,
 
-                        contentDescription = null,
+                        contentDescription =
+                            null,
 
                         tint =
                             Color.White,
@@ -589,12 +586,10 @@ private fun PremiumDrawer(
                     )
                 }
 
-
                 Spacer(
                     modifier =
                         Modifier.width(14.dp)
                 )
-
 
                 Column {
 
@@ -613,40 +608,27 @@ private fun PremiumDrawer(
                 }
             }
 
-
             Spacer(
                 modifier =
                     Modifier.height(28.dp)
             )
-
 
             HorizontalDivider(
                 color =
                     Color(0xFFEDEDF2)
             )
 
-
             Spacer(
                 modifier =
                     Modifier.height(15.dp)
             )
 
-
             PremiumDrawerItem(
-
-                title =
-                    "Trang chủ",
-
-                subtitle =
-                    "Tổng quan thư viện",
-
-                icon =
-                    Icons.Default.Home,
-
+                title = "Trang chủ",
+                subtitle = "Tổng quan thư viện",
+                icon = Icons.Default.Home,
                 selected =
-                    currentPage ==
-                            DashboardPage.HOME,
-
+                    currentPage == DashboardPage.HOME,
                 onClick = {
                     onPageSelected(
                         DashboardPage.HOME
@@ -654,22 +636,12 @@ private fun PremiumDrawer(
                 }
             )
 
-
             PremiumDrawerItem(
-
-                title =
-                    "Tài khoản",
-
-                subtitle =
-                    "Thông tin cá nhân",
-
-                icon =
-                    Icons.Default.Person,
-
+                title = "Tài khoản",
+                subtitle = "Thông tin cá nhân",
+                icon = Icons.Default.Person,
                 selected =
-                    currentPage ==
-                            DashboardPage.ACCOUNT,
-
+                    currentPage == DashboardPage.ACCOUNT,
                 onClick = {
                     onPageSelected(
                         DashboardPage.ACCOUNT
@@ -677,22 +649,12 @@ private fun PremiumDrawer(
                 }
             )
 
-
             PremiumDrawerItem(
-
-                title =
-                    "Cài đặt",
-
-                subtitle =
-                    "Tuỳ chỉnh ứng dụng",
-
-                icon =
-                    Icons.Default.Settings,
-
+                title = "Cài đặt",
+                subtitle = "Tuỳ chỉnh ứng dụng",
+                icon = Icons.Default.Settings,
                 selected =
-                    currentPage ==
-                            DashboardPage.SETTINGS,
-
+                    currentPage == DashboardPage.SETTINGS,
                 onClick = {
                     onPageSelected(
                         DashboardPage.SETTINGS
@@ -700,21 +662,16 @@ private fun PremiumDrawer(
                 }
             )
 
-
             Spacer(
                 modifier =
                     Modifier.weight(1f)
             )
 
-
             Card(
-
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(
-                            bottom = 12.dp
-                        ),
+                        .padding(bottom = 12.dp),
 
                 shape =
                     RoundedCornerShape(20.dp),
@@ -724,7 +681,6 @@ private fun PremiumDrawer(
                         containerColor =
                             VerySoftPurple
                     )
-
             ) {
 
                 Row(
@@ -739,7 +695,8 @@ private fun PremiumDrawer(
                         imageVector =
                             Icons.Default.Info,
 
-                        contentDescription = null,
+                        contentDescription =
+                            null,
 
                         tint =
                             PrimaryPurple
@@ -755,6 +712,7 @@ private fun PremiumDrawer(
                         Text(
                             text =
                                 "ALFM Library",
+
                             fontWeight =
                                 FontWeight.Bold
                         )
@@ -762,8 +720,10 @@ private fun PremiumDrawer(
                         Text(
                             text =
                                 "Version 1.0",
+
                             fontSize =
                                 11.sp,
+
                             color =
                                 TextSecondary
                         )
@@ -817,7 +777,10 @@ private fun PremiumDrawerItem(
 
                 Icon(
                     imageVector = icon,
-                    contentDescription = null,
+
+                    contentDescription =
+                        null,
+
                     tint =
                         if (selected)
                             Color.White
@@ -833,6 +796,7 @@ private fun PremiumDrawerItem(
 
                 Text(
                     text = title,
+
                     fontWeight =
                         if (selected)
                             FontWeight.Bold
@@ -842,17 +806,21 @@ private fun PremiumDrawerItem(
 
                 Text(
                     text = subtitle,
+
                     fontSize = 11.sp,
+
                     color = TextSecondary
                 )
             }
         },
 
         colors =
-            androidx.compose.material3.NavigationDrawerItemDefaults
+            androidx.compose.material3
+                .NavigationDrawerItemDefaults
                 .colors(
                     selectedContainerColor =
                         SoftPurple,
+
                     unselectedContainerColor =
                         Color.Transparent
                 ),
@@ -861,9 +829,7 @@ private fun PremiumDrawerItem(
             RoundedCornerShape(18.dp),
 
         modifier =
-            Modifier.padding(
-                vertical = 3.dp
-            )
+            Modifier.padding(vertical = 3.dp)
     )
 }
 
@@ -889,8 +855,7 @@ private fun PremiumTopBar(
         navigationIcon = {
 
             IconButton(
-                onClick =
-                    onMenuClick
+                onClick = onMenuClick
             ) {
 
                 Icon(
@@ -934,8 +899,7 @@ private fun PremiumTopBar(
                         )
                     },
 
-                    singleLine =
-                        true,
+                    singleLine = true,
 
                     colors =
                         TextFieldDefaults.colors(
@@ -987,7 +951,6 @@ private fun PremiumTopBar(
                         fontSize =
                             19.sp
                     )
-
 
                     if (
                         currentPage ==
@@ -1090,26 +1053,18 @@ private fun PremiumHomePage(
 
         verticalArrangement =
             Arrangement.spacedBy(18.dp)
-
     ) {
-
-
-        // ==================================================
-        // HERO
-        // ==================================================
 
         item {
 
             HeroWelcomeCard(
-                readCount = readCount,
-                totalBooks = totalBooks
+                readCount =
+                    readCount,
+
+                totalBooks =
+                    totalBooks
             )
         }
-
-
-        // ==================================================
-        // STATS
-        // ==================================================
 
         item {
 
@@ -1122,7 +1077,6 @@ private fun PremiumHomePage(
             ) {
 
                 PremiumStatCard(
-
                     modifier =
                         Modifier.weight(1f),
 
@@ -1142,9 +1096,7 @@ private fun PremiumHomePage(
                         PrimaryPurple
                 )
 
-
                 PremiumStatCard(
-
                     modifier =
                         Modifier.weight(1f),
 
@@ -1165,12 +1117,10 @@ private fun PremiumHomePage(
                 )
             }
 
-
             Spacer(
                 modifier =
                     Modifier.height(11.dp)
             )
-
 
             Row(
                 modifier =
@@ -1181,7 +1131,6 @@ private fun PremiumHomePage(
             ) {
 
                 PremiumStatCard(
-
                     modifier =
                         Modifier.weight(1f),
 
@@ -1201,9 +1150,7 @@ private fun PremiumHomePage(
                         DeepPurple
                 )
 
-
                 PremiumStatCard(
-
                     modifier =
                         Modifier.weight(1f),
 
@@ -1225,15 +1172,9 @@ private fun PremiumHomePage(
             }
         }
 
-
-        // ==================================================
-        // PROGRESS
-        // ==================================================
-
         item {
 
             PremiumProgressCard(
-
                 progress =
                     animatedProgress,
 
@@ -1248,11 +1189,6 @@ private fun PremiumHomePage(
             )
         }
 
-
-        // ==================================================
-        // CONTINUE READING
-        // ==================================================
-
         val continueBook =
             books.firstOrNull {
                 it.status ==
@@ -1266,16 +1202,15 @@ private fun PremiumHomePage(
                 SectionHeader(
                     title =
                         "Tiếp tục đọc",
+
                     subtitle =
                         "Đừng để cuốn sách đang dang dở"
                 )
             }
 
-
             item {
 
                 ContinueReadingCard(
-
                     book =
                         continueBook,
 
@@ -1288,41 +1223,31 @@ private fun PremiumHomePage(
             }
         }
 
-
-        // ==================================================
-        // TOP BOOK
-        // ==================================================
-
         item {
 
             SectionHeader(
                 title =
                     "🔥 Top sách nổi bật",
+
                 subtitle =
                     "Được xem nhiều nhất"
             )
         }
-
 
         if (topBooks.isNotEmpty()) {
 
             item {
 
                 LazyRow(
-
                     horizontalArrangement =
                         Arrangement.spacedBy(13.dp),
 
                     contentPadding =
-                        PaddingValues(
-                            end = 10.dp
-                        )
-
+                        PaddingValues(end = 10.dp)
                 ) {
 
                     items(
-                        items =
-                            topBooks,
+                        items = topBooks,
 
                         key = { book ->
                             book.bookId
@@ -1330,13 +1255,10 @@ private fun PremiumHomePage(
                                     .hashCode()
                                     .toLong()
                         }
-
                     ) { book ->
 
                         val rank =
-                            topBooks.indexOf(
-                                book
-                            ) + 1
+                            topBooks.indexOf(book) + 1
 
                         PremiumTopBookCard(
 
@@ -1352,9 +1274,7 @@ private fun PremiumHomePage(
                                 ] ?: 0,
 
                             onClick = {
-                                onBookClick(
-                                    book
-                                )
+                                onBookClick(book)
                             }
                         )
                     }
@@ -1362,21 +1282,16 @@ private fun PremiumHomePage(
             }
         }
 
-
-        // ==================================================
-        // MY BOOKS
-        // ==================================================
-
         item {
 
             SectionHeader(
                 title =
                     "Sách của tôi",
+
                 subtitle =
                     "${books.size} sách đang hiển thị"
             )
         }
-
 
         item {
 
@@ -1393,10 +1308,13 @@ private fun PremiumHomePage(
             ) {
 
                 PremiumFilterChip(
-                    title = "Tất cả",
+                    title =
+                        "Tất cả",
+
                     selected =
                         selectedFilter ==
                                 BookFilter.ALL,
+
                     onClick = {
                         onFilterChange(
                             BookFilter.ALL
@@ -1405,10 +1323,13 @@ private fun PremiumHomePage(
                 )
 
                 PremiumFilterChip(
-                    title = "Đang đọc",
+                    title =
+                        "Đang đọc",
+
                     selected =
                         selectedFilter ==
                                 BookFilter.READING,
+
                     onClick = {
                         onFilterChange(
                             BookFilter.READING
@@ -1417,10 +1338,13 @@ private fun PremiumHomePage(
                 )
 
                 PremiumFilterChip(
-                    title = "Đã đọc",
+                    title =
+                        "Đã đọc",
+
                     selected =
                         selectedFilter ==
                                 BookFilter.READ,
+
                     onClick = {
                         onFilterChange(
                             BookFilter.READ
@@ -1429,10 +1353,13 @@ private fun PremiumHomePage(
                 )
 
                 PremiumFilterChip(
-                    title = "Chưa đọc",
+                    title =
+                        "Chưa đọc",
+
                     selected =
                         selectedFilter ==
                                 BookFilter.UNREAD,
+
                     onClick = {
                         onFilterChange(
                             BookFilter.UNREAD
@@ -1442,11 +1369,9 @@ private fun PremiumHomePage(
             }
         }
 
-
         if (books.isEmpty()) {
 
             item {
-
                 PremiumEmptyLibrary()
             }
 
@@ -1457,7 +1382,6 @@ private fun PremiumHomePage(
                 items = books,
 
                 key = { book ->
-
                     book.bookId
                         ?: book.title
                             .hashCode()
@@ -1477,15 +1401,12 @@ private fun PremiumHomePage(
                         ] ?: 0,
 
                     onClick = {
-                        onBookClick(
-                            book
-                        )
+                        onBookClick(book)
                     },
 
                     onMarkAsRead = {
 
                         book.bookId?.let { id ->
-
                             onMarkAsRead(
                                 id.toInt()
                             )
@@ -1499,7 +1420,7 @@ private fun PremiumHomePage(
 
 
 // ======================================================
-// HERO CARD
+// HERO
 // ======================================================
 
 @Composable
@@ -1509,7 +1430,6 @@ private fun HeroWelcomeCard(
 ) {
 
     Card(
-
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -1527,7 +1447,6 @@ private fun HeroWelcomeCard(
                 containerColor =
                     Color.Transparent
             )
-
     ) {
 
         Box(
@@ -1549,7 +1468,6 @@ private fun HeroWelcomeCard(
             Column {
 
                 Surface(
-
                     color =
                         Color.White.copy(
                             alpha = 0.16f
@@ -1557,7 +1475,6 @@ private fun HeroWelcomeCard(
 
                     shape =
                         RoundedCornerShape(50.dp)
-
                 ) {
 
                     Text(
@@ -1581,12 +1498,10 @@ private fun HeroWelcomeCard(
                     )
                 }
 
-
                 Spacer(
                     modifier =
                         Modifier.height(17.dp)
                 )
-
 
                 Text(
                     text =
@@ -1602,12 +1517,10 @@ private fun HeroWelcomeCard(
                         FontWeight.ExtraBold
                 )
 
-
                 Spacer(
                     modifier =
                         Modifier.height(5.dp)
                 )
-
 
                 Text(
                     text =
@@ -1622,12 +1535,10 @@ private fun HeroWelcomeCard(
                         14.sp
                 )
 
-
                 Spacer(
                     modifier =
                         Modifier.height(20.dp)
                 )
-
 
                 Row(
                     verticalAlignment =
@@ -1653,19 +1564,18 @@ private fun HeroWelcomeCard(
                             imageVector =
                                 Icons.Default.AutoStories,
 
-                            contentDescription = null,
+                            contentDescription =
+                                null,
 
                             tint =
                                 Color.White
                         )
                     }
 
-
                     Spacer(
                         modifier =
                             Modifier.width(11.dp)
                     )
-
 
                     Column {
 
@@ -1715,7 +1625,6 @@ private fun PremiumStatCard(
 ) {
 
     Card(
-
         modifier =
             modifier
                 .height(115.dp)
@@ -1732,7 +1641,6 @@ private fun PremiumStatCard(
                 containerColor =
                     SurfaceWhite
             )
-
     ) {
 
         Column(
@@ -1773,7 +1681,6 @@ private fun PremiumStatCard(
                 )
             }
 
-
             Row(
                 verticalAlignment =
                     Alignment.Bottom
@@ -1793,12 +1700,10 @@ private fun PremiumStatCard(
                         TextPrimary
                 )
 
-
                 Spacer(
                     modifier =
                         Modifier.width(7.dp)
                 )
-
 
                 Text(
                     text =
@@ -1811,9 +1716,7 @@ private fun PremiumStatCard(
                         TextSecondary,
 
                     modifier =
-                        Modifier.padding(
-                            bottom = 4.dp
-                        )
+                        Modifier.padding(bottom = 4.dp)
                 )
             }
         }
@@ -1822,7 +1725,7 @@ private fun PremiumStatCard(
 
 
 // ======================================================
-// PROGRESS CARD
+// PROGRESS
 // ======================================================
 
 @Composable
@@ -1834,7 +1737,6 @@ private fun PremiumProgressCard(
 ) {
 
     Card(
-
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -1851,7 +1753,6 @@ private fun PremiumProgressCard(
                 containerColor =
                     SurfaceWhite
             )
-
     ) {
 
         Column(
@@ -1892,19 +1793,18 @@ private fun PremiumProgressCard(
                             imageVector =
                                 Icons.Default.AutoStories,
 
-                            contentDescription = null,
+                            contentDescription =
+                                null,
 
                             tint =
                                 PrimaryPurple
                         )
                     }
 
-
                     Spacer(
                         modifier =
                             Modifier.width(12.dp)
                     )
-
 
                     Column {
 
@@ -1932,10 +1832,10 @@ private fun PremiumProgressCard(
                     }
                 }
 
-
                 Surface(
                     color =
                         SoftPurple,
+
                     shape =
                         CircleShape
                 ) {
@@ -1959,12 +1859,10 @@ private fun PremiumProgressCard(
                 }
             }
 
-
             Spacer(
                 modifier =
                     Modifier.height(18.dp)
             )
-
 
             LinearProgressIndicator(
 
@@ -2059,7 +1957,6 @@ private fun ContinueReadingCard(
 ) {
 
     Card(
-
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -2079,7 +1976,6 @@ private fun ContinueReadingCard(
                 containerColor =
                     SurfaceWhite
             )
-
     ) {
 
         Row(
@@ -2096,12 +1992,10 @@ private fun ContinueReadingCard(
                 height = 104
             )
 
-
             Spacer(
                 modifier =
                     Modifier.width(15.dp)
             )
-
 
             Column(
                 modifier =
@@ -2137,12 +2031,10 @@ private fun ContinueReadingCard(
                     )
                 }
 
-
                 Spacer(
                     modifier =
                         Modifier.height(8.dp)
                 )
-
 
                 Text(
                     text =
@@ -2161,12 +2053,10 @@ private fun ContinueReadingCard(
                         TextOverflow.Ellipsis
                 )
 
-
                 Spacer(
                     modifier =
                         Modifier.height(4.dp)
                 )
-
 
                 Text(
                     text =
@@ -2181,12 +2071,10 @@ private fun ContinueReadingCard(
                         12.sp
                 )
 
-
                 Spacer(
                     modifier =
                         Modifier.height(12.dp)
                 )
-
 
                 LinearProgressIndicator(
 
@@ -2198,9 +2086,7 @@ private fun ContinueReadingCard(
                         Modifier
                             .fillMaxWidth()
                             .height(6.dp)
-                            .clip(
-                                CircleShape
-                            ),
+                            .clip(CircleShape),
 
                     color =
                         PrimaryPurple,
@@ -2209,12 +2095,10 @@ private fun ContinueReadingCard(
                         SoftPurple
                 )
 
-
                 Spacer(
                     modifier =
                         Modifier.height(5.dp)
                 )
-
 
                 Text(
                     text =
@@ -2236,7 +2120,7 @@ private fun ContinueReadingCard(
 
 
 // ======================================================
-// TOP BOOK CARD
+// TOP BOOK
 // ======================================================
 
 @Composable
@@ -2248,7 +2132,6 @@ private fun PremiumTopBookCard(
 ) {
 
     Card(
-
         modifier =
             Modifier
                 .width(162.dp)
@@ -2268,7 +2151,6 @@ private fun PremiumTopBookCard(
                 containerColor =
                     SurfaceWhite
             )
-
     ) {
 
         Column {
@@ -2285,7 +2167,6 @@ private fun PremiumTopBookCard(
                     modifier =
                         Modifier.fillMaxSize()
                 )
-
 
                 Surface(
                     modifier =
@@ -2325,7 +2206,6 @@ private fun PremiumTopBookCard(
                             )
                     )
                 }
-
 
                 Surface(
                     modifier =
@@ -2369,12 +2249,10 @@ private fun PremiumTopBookCard(
                                 Modifier.size(13.dp)
                         )
 
-
                         Spacer(
                             modifier =
                                 Modifier.width(4.dp)
                         )
-
 
                         Text(
                             text =
@@ -2389,7 +2267,6 @@ private fun PremiumTopBookCard(
                     }
                 }
             }
-
 
             Column(
                 modifier =
@@ -2413,12 +2290,10 @@ private fun PremiumTopBookCard(
                         TextOverflow.Ellipsis
                 )
 
-
                 Spacer(
                     modifier =
                         Modifier.height(3.dp)
                 )
-
 
                 Text(
                     text =
@@ -2457,9 +2332,11 @@ private fun PremiumFilterChip(
 
     FilterChip(
 
-        selected = selected,
+        selected =
+            selected,
 
-        onClick = onClick,
+        onClick =
+            onClick,
 
         label = {
 
@@ -2499,7 +2376,7 @@ private fun PremiumFilterChip(
 
 
 // ======================================================
-// BOOK LIST ITEM
+// BOOK LIST
 // ======================================================
 
 @Composable
@@ -2511,7 +2388,6 @@ private fun PremiumBookListItem(
 ) {
 
     Card(
-
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -2532,7 +2408,6 @@ private fun PremiumBookListItem(
                 containerColor =
                     SurfaceWhite
             )
-
     ) {
 
         Row(
@@ -2549,12 +2424,10 @@ private fun PremiumBookListItem(
                 height = 88
             )
 
-
             Spacer(
                 modifier =
                     Modifier.width(14.dp)
             )
-
 
             Column(
                 modifier =
@@ -2578,12 +2451,10 @@ private fun PremiumBookListItem(
                         TextOverflow.Ellipsis
                 )
 
-
                 Spacer(
                     modifier =
                         Modifier.height(4.dp)
                 )
-
 
                 Text(
                     text =
@@ -2604,12 +2475,10 @@ private fun PremiumBookListItem(
                         TextOverflow.Ellipsis
                 )
 
-
                 Spacer(
                     modifier =
                         Modifier.height(11.dp)
                 )
-
 
                 Row(
                     verticalAlignment =
@@ -2621,18 +2490,17 @@ private fun PremiumBookListItem(
                             book.status
                     )
 
-
                     Spacer(
                         modifier =
                             Modifier.width(10.dp)
                     )
 
-
                     Icon(
                         imageVector =
                             Icons.Default.Visibility,
 
-                        contentDescription = null,
+                        contentDescription =
+                            null,
 
                         tint =
                             TextSecondary,
@@ -2641,12 +2509,10 @@ private fun PremiumBookListItem(
                             Modifier.size(14.dp)
                     )
 
-
                     Spacer(
                         modifier =
                             Modifier.width(4.dp)
                     )
-
 
                     Text(
                         text =
@@ -2660,7 +2526,6 @@ private fun PremiumBookListItem(
                     )
                 }
             }
-
 
             if (
                 book.status !=
@@ -2759,10 +2624,7 @@ private fun PremiumBookCover(
             )
         }
 
-    if (
-        !book.imageUrl
-            .isNullOrBlank()
-    ) {
+    if (!book.imageUrl.isNullOrBlank()) {
 
         AsyncImage(
             model =
@@ -2781,7 +2643,6 @@ private fun PremiumBookCover(
     } else {
 
         Box(
-
             modifier =
                 finalModifier
                     .background(
@@ -2796,7 +2657,6 @@ private fun PremiumBookCover(
 
             contentAlignment =
                 Alignment.Center
-
         ) {
 
             Icon(
@@ -2869,7 +2729,6 @@ private fun BookStatusBadge(
         }
     }
 
-
     Surface(
         color =
             background,
@@ -2909,7 +2768,6 @@ private fun BookStatusBadge(
 private fun PremiumEmptyLibrary() {
 
     Card(
-
         modifier =
             Modifier.fillMaxWidth(),
 
@@ -2921,17 +2779,13 @@ private fun PremiumEmptyLibrary() {
                 containerColor =
                     SurfaceWhite
             )
-
     ) {
 
         Column(
-
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(
-                        vertical = 45.dp
-                    ),
+                    .padding(vertical = 45.dp),
 
             horizontalAlignment =
                 Alignment.CenterHorizontally
@@ -2965,12 +2819,10 @@ private fun PremiumEmptyLibrary() {
                 )
             }
 
-
             Spacer(
                 modifier =
                     Modifier.height(15.dp)
             )
-
 
             Text(
                 text =
@@ -2983,12 +2835,10 @@ private fun PremiumEmptyLibrary() {
                     17.sp
             )
 
-
             Spacer(
                 modifier =
                     Modifier.height(4.dp)
             )
-
 
             Text(
                 text =
@@ -3074,12 +2924,10 @@ private fun PremiumBookDialog(
                             book.status
                     )
 
-
                     Spacer(
                         modifier =
                             Modifier.width(12.dp)
                     )
-
 
                     Icon(
                         imageVector =
@@ -3095,12 +2943,10 @@ private fun PremiumBookDialog(
                             Modifier.size(16.dp)
                     )
 
-
                     Spacer(
                         modifier =
                             Modifier.width(5.dp)
                     )
-
 
                     Text(
                         text =
@@ -3113,7 +2959,6 @@ private fun PremiumBookDialog(
                             12.sp
                     )
                 }
-
 
                 if (
                     !book.category
@@ -3171,7 +3016,6 @@ private fun PremiumBookDialog(
 
                     shape =
                         RoundedCornerShape(14.dp)
-
                 ) {
 
                     Icon(
@@ -3182,12 +3026,10 @@ private fun PremiumBookDialog(
                             null
                     )
 
-
                     Spacer(
                         modifier =
                             Modifier.width(6.dp)
                     )
-
 
                     Text(
                         text =
@@ -3219,123 +3061,308 @@ private fun PremiumBookDialog(
 // ======================================================
 
 @Composable
-
 private fun PremiumAccountPage(
     modifier: Modifier,
+    memberId: Long,
     totalBooks: Int,
     readCount: Int,
     readingCount: Int
 ) {
-    var editing by remember { mutableStateOf(false) }
-    var fullName by remember { mutableStateOf("Nguyễn Văn A") }
-    var email by remember { mutableStateOf("user@gmail.com") }
-    var phone by remember { mutableStateOf("0900000000") }
-    var birthday by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
-    var favoriteGenre by remember { mutableStateOf("Tiểu thuyết") }
-    var yearlyGoal by remember { mutableStateOf("20") }
-    var bio by remember {
-        mutableStateOf("Yêu thích đọc sách và khám phá những điều mới.")
+
+    val memberRepository =
+        remember {
+            MemberRepository()
+        }
+
+    val scope =
+        rememberCoroutineScope()
+
+    var editing by remember {
+        mutableStateOf(false)
     }
-    var message by remember { mutableStateOf("") }
+
+    var fullName by remember {
+        mutableStateOf("")
+    }
+
+    var email by remember {
+        mutableStateOf("")
+    }
+
+    var phone by remember {
+        mutableStateOf("")
+    }
+
+    // Những field này hiện chỉ hiển thị trên Android.
+    // Chưa lưu Oracle vì LIB_MEMBERS chưa có column tương ứng.
+    var birthday by remember {
+        mutableStateOf("")
+    }
+
+    var address by remember {
+        mutableStateOf("")
+    }
+
+    var favoriteGenre by remember {
+        mutableStateOf("Tiểu thuyết")
+    }
+
+    var yearlyGoal by remember {
+        mutableStateOf("20")
+    }
+
+    var bio by remember {
+        mutableStateOf(
+            "Yêu thích đọc sách và khám phá những điều mới."
+        )
+    }
+
+    var message by remember {
+        mutableStateOf("")
+    }
+
+    var isLoading by remember {
+        mutableStateOf(true)
+    }
+
+    var isSaving by remember {
+        mutableStateOf(false)
+    }
+
+
+    // ==================================================
+    // LOAD MEMBER FROM ORACLE
+    // ==================================================
+
+    LaunchedEffect(memberId) {
+
+        isLoading = true
+        message = ""
+
+        try {
+
+            val member =
+                memberRepository.getMember(
+                    memberId
+                )
+
+            fullName =
+                member.fullName
+
+            email =
+                member.email ?: ""
+
+            phone =
+                member.phone ?: ""
+
+            isLoading = false
+
+        } catch (e: Exception) {
+
+            isLoading = false
+
+            message =
+                "Không thể tải thông tin tài khoản"
+        }
+    }
+
 
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = 18.dp,
-            end = 18.dp,
-            top = 18.dp,
-            bottom = 35.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(17.dp)
+
+        modifier =
+            modifier.fillMaxSize(),
+
+        contentPadding =
+            PaddingValues(
+                start = 18.dp,
+                end = 18.dp,
+                top = 18.dp,
+                bottom = 35.dp
+            ),
+
+        verticalArrangement =
+            Arrangement.spacedBy(17.dp)
     ) {
 
+        // ==================================================
+        // PROFILE HEADER
+        // ==================================================
+
         item {
+
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(8.dp, RoundedCornerShape(30.dp)),
-                shape = RoundedCornerShape(30.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.Transparent
-                )
-            ) {
-                Box(
-                    modifier = Modifier
+                modifier =
+                    Modifier
                         .fillMaxWidth()
-                        .background(
-                            Brush.linearGradient(
-                                listOf(PrimaryPurple, DeepPurple)
+                        .shadow(
+                            8.dp,
+                            RoundedCornerShape(30.dp)
+                        ),
+
+                shape =
+                    RoundedCornerShape(30.dp),
+
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor =
+                            Color.Transparent
+                    )
+            ) {
+
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        PrimaryPurple,
+                                        DeepPurple
+                                    )
+                                )
                             )
-                        )
-                        .padding(24.dp)
+                            .padding(24.dp)
                 ) {
+
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        modifier =
+                            Modifier.fillMaxWidth(),
+
+                        horizontalAlignment =
+                            Alignment.CenterHorizontally
                     ) {
+
                         Box(
-                            modifier = Modifier
-                                .size(94.dp)
-                                .background(
-                                    Color.White.copy(alpha = 0.17f),
-                                    CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
+                            modifier =
+                                Modifier
+                                    .size(94.dp)
+                                    .background(
+                                        Color.White.copy(
+                                            alpha = 0.17f
+                                        ),
+                                        CircleShape
+                                    ),
+
+                            contentAlignment =
+                                Alignment.Center
                         ) {
+
                             Box(
-                                modifier = Modifier
-                                    .size(78.dp)
-                                    .background(Color.White, CircleShape),
-                                contentAlignment = Alignment.Center
+                                modifier =
+                                    Modifier
+                                        .size(78.dp)
+                                        .background(
+                                            Color.White,
+                                            CircleShape
+                                        ),
+
+                                contentAlignment =
+                                    Alignment.Center
                             ) {
+
                                 Icon(
-                                    imageVector = Icons.Default.Person,
-                                    contentDescription = null,
-                                    tint = PrimaryPurple,
-                                    modifier = Modifier.size(46.dp)
+                                    imageVector =
+                                        Icons.Default.Person,
+
+                                    contentDescription =
+                                        null,
+
+                                    tint =
+                                        PrimaryPurple,
+
+                                    modifier =
+                                        Modifier.size(46.dp)
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(13.dp))
-
-                        Text(
-                            text = fullName,
-                            color = Color.White,
-                            fontSize = 23.sp,
-                            fontWeight = FontWeight.ExtraBold
+                        Spacer(
+                            modifier =
+                                Modifier.height(13.dp)
                         )
 
-                        Text(
-                            text = email,
-                            color = Color.White.copy(alpha = 0.78f),
-                            fontSize = 12.sp
-                        )
+                        if (isLoading) {
 
-                        Spacer(modifier = Modifier.height(22.dp))
+                            CircularProgressIndicator(
+                                color =
+                                    Color.White,
+
+                                modifier =
+                                    Modifier.size(28.dp)
+                            )
+
+                        } else {
+
+                            Text(
+                                text =
+                                    if (fullName.isBlank())
+                                        "Người dùng"
+                                    else
+                                        fullName,
+
+                                color =
+                                    Color.White,
+
+                                fontSize =
+                                    23.sp,
+
+                                fontWeight =
+                                    FontWeight.ExtraBold
+                            )
+
+                            Text(
+                                text =
+                                    email,
+
+                                color =
+                                    Color.White.copy(
+                                        alpha = 0.78f
+                                    ),
+
+                                fontSize =
+                                    12.sp
+                            )
+                        }
+
+                        Spacer(
+                            modifier =
+                                Modifier.height(22.dp)
+                        )
 
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
+                            modifier =
+                                Modifier.fillMaxWidth(),
+
+                            horizontalArrangement =
+                                Arrangement.SpaceEvenly
                         ) {
+
                             ProfileStat(
-                                value = totalBooks.toString(),
-                                title = "Tổng sách"
+                                value =
+                                    totalBooks.toString(),
+
+                                title =
+                                    "Tổng sách"
                             )
 
                             ProfileDivider()
 
                             ProfileStat(
-                                value = readCount.toString(),
-                                title = "Đã đọc"
+                                value =
+                                    readCount.toString(),
+
+                                title =
+                                    "Đã đọc"
                             )
 
                             ProfileDivider()
 
                             ProfileStat(
-                                value = readingCount.toString(),
-                                title = "Đang đọc"
+                                value =
+                                    readingCount.toString(),
+
+                                title =
+                                    "Đang đọc"
                             )
                         }
                     }
@@ -3343,179 +3370,464 @@ private fun PremiumAccountPage(
             }
         }
 
+
+        // ==================================================
+        // PERSONAL INFORMATION HEADER
+        // ==================================================
+
         item {
+
             ProfileSectionHeader(
-                title = "Thông tin cá nhân",
-                icon = Icons.Default.Person,
-                actionText = if (editing) null else "Chỉnh sửa",
+
+                title =
+                    "Thông tin cá nhân",
+
+                icon =
+                    Icons.Default.Person,
+
+                actionText =
+                    if (editing)
+                        null
+                    else
+                        "Chỉnh sửa",
+
                 onAction = {
+
                     editing = true
                     message = ""
                 }
             )
         }
 
+
+        // ==================================================
+        // PERSONAL INFORMATION
+        // ==================================================
+
         item {
+
             ProfileSectionCard {
-                ProfileInput(
-                    title = "Họ và tên",
-                    value = fullName,
-                    enabled = editing,
-                    icon = Icons.Default.Person,
-                    onValueChange = { fullName = it }
-                )
 
                 ProfileInput(
-                    title = "Email",
-                    value = email,
-                    enabled = editing,
-                    icon = Icons.Default.Email,
-                    keyboardType = KeyboardType.Email,
-                    onValueChange = { email = it }
-                )
 
-                ProfileInput(
-                    title = "Số điện thoại",
-                    value = phone,
-                    enabled = editing,
-                    icon = Icons.Default.Phone,
-                    keyboardType = KeyboardType.Phone,
+                    title =
+                        "Họ và tên",
+
+                    value =
+                        fullName,
+
+                    enabled =
+                        editing,
+
+                    icon =
+                        Icons.Default.Person,
+
                     onValueChange = {
-                        phone = it.filter { char -> char.isDigit() }
+                        fullName = it
                     }
                 )
 
-                ProfileInput(
-                    title = "Ngày sinh",
-                    value = birthday,
-                    enabled = editing,
-                    icon = Icons.Default.Info,
-                    placeholder = "01/01/2005",
-                    onValueChange = { birthday = it }
-                )
 
                 ProfileInput(
-                    title = "Địa chỉ",
-                    value = address,
-                    enabled = editing,
-                    icon = Icons.Default.LocationOn,
-                    placeholder = "Nhập địa chỉ",
-                    onValueChange = { address = it }
+
+                    title =
+                        "Email",
+
+                    value =
+                        email,
+
+                    enabled =
+                        editing,
+
+                    icon =
+                        Icons.Default.Email,
+
+                    keyboardType =
+                        KeyboardType.Email,
+
+                    onValueChange = {
+                        email = it
+                    }
+                )
+
+
+                ProfileInput(
+
+                    title =
+                        "Số điện thoại",
+
+                    value =
+                        phone,
+
+                    enabled =
+                        editing,
+
+                    icon =
+                        Icons.Default.Phone,
+
+                    keyboardType =
+                        KeyboardType.Phone,
+
+                    onValueChange = {
+
+                        phone =
+                            it.filter { char ->
+                                char.isDigit()
+                            }
+                    }
+                )
+
+
+                ProfileInput(
+
+                    title =
+                        "Ngày sinh",
+
+                    value =
+                        birthday,
+
+                    enabled =
+                        editing,
+
+                    icon =
+                        Icons.Default.Info,
+
+                    placeholder =
+                        "01/01/2005",
+
+                    onValueChange = {
+                        birthday = it
+                    }
+                )
+
+
+                ProfileInput(
+
+                    title =
+                        "Địa chỉ",
+
+                    value =
+                        address,
+
+                    enabled =
+                        editing,
+
+                    icon =
+                        Icons.Default.LocationOn,
+
+                    placeholder =
+                        "Nhập địa chỉ",
+
+                    onValueChange = {
+                        address = it
+                    }
                 )
             }
         }
 
+
+        // ==================================================
+        // READING PREFERENCES
+        // ==================================================
+
         item {
+
             ProfileSectionHeader(
-                title = "Sở thích đọc sách",
-                icon = Icons.Default.Favorite
+
+                title =
+                    "Sở thích đọc sách",
+
+                icon =
+                    Icons.Default.Favorite
             )
         }
 
+
         item {
+
             ProfileSectionCard {
-                ProfileInput(
-                    title = "Thể loại yêu thích",
-                    value = favoriteGenre,
-                    enabled = editing,
-                    icon = Icons.Default.Favorite,
-                    onValueChange = { favoriteGenre = it }
-                )
 
                 ProfileInput(
-                    title = "Mục tiêu sách / năm",
-                    value = yearlyGoal,
-                    enabled = editing,
-                    icon = Icons.Default.MenuBook,
-                    keyboardType = KeyboardType.Number,
+
+                    title =
+                        "Thể loại yêu thích",
+
+                    value =
+                        favoriteGenre,
+
+                    enabled =
+                        editing,
+
+                    icon =
+                        Icons.Default.Favorite,
+
                     onValueChange = {
-                        yearlyGoal = it.filter { char -> char.isDigit() }
+                        favoriteGenre = it
                     }
                 )
 
+
+                ProfileInput(
+
+                    title =
+                        "Mục tiêu sách / năm",
+
+                    value =
+                        yearlyGoal,
+
+                    enabled =
+                        editing,
+
+                    icon =
+                        Icons.Default.MenuBook,
+
+                    keyboardType =
+                        KeyboardType.Number,
+
+                    onValueChange = {
+
+                        yearlyGoal =
+                            it.filter { char ->
+                                char.isDigit()
+                            }
+                    }
+                )
+
+
                 OutlinedTextField(
-                    value = bio,
-                    onValueChange = { bio = it },
-                    enabled = editing,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = {
-                        Text("Giới thiệu bản thân")
+
+                    value =
+                        bio,
+
+                    onValueChange = {
+                        bio = it
                     },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = null,
-                            tint = PrimaryPurple
+
+                    enabled =
+                        editing,
+
+                    modifier =
+                        Modifier.fillMaxWidth(),
+
+                    label = {
+                        Text(
+                            "Giới thiệu bản thân"
                         )
                     },
-                    minLines = 3,
-                    shape = RoundedCornerShape(17.dp)
+
+                    leadingIcon = {
+
+                        Icon(
+                            imageVector =
+                                Icons.Default.Info,
+
+                            contentDescription =
+                                null,
+
+                            tint =
+                                PrimaryPurple
+                        )
+                    },
+
+                    minLines =
+                        3,
+
+                    shape =
+                        RoundedCornerShape(17.dp)
                 )
             }
         }
 
+
+        // ==================================================
+        // SAVE BUTTON
+        // ==================================================
+
         if (editing) {
+
             item {
+
                 Button(
+
+                    enabled =
+                        !isSaving,
+
                     onClick = {
+
                         when {
+
                             fullName.isBlank() -> {
-                                message = "Vui lòng nhập họ và tên"
+
+                                message =
+                                    "Vui lòng nhập họ và tên"
                             }
 
                             email.isBlank() -> {
-                                message = "Vui lòng nhập email"
+
+                                message =
+                                    "Vui lòng nhập email"
                             }
 
                             else -> {
-                                editing = false
-                                message = "Đã lưu thông tin tài khoản"
+
+                                scope.launch {
+
+                                    isSaving = true
+                                    message = ""
+
+                                    val result =
+                                        memberRepository.updateMember(
+
+                                            memberId =
+                                                memberId,
+
+                                            fullName =
+                                                fullName,
+
+                                            email =
+                                                email,
+
+                                            phone =
+                                                phone
+                                        )
+
+                                    isSaving = false
+
+                                    result.onSuccess { updatedMember ->
+
+                                        fullName =
+                                            updatedMember.fullName
+
+                                        email =
+                                            updatedMember.email
+                                                ?: ""
+
+                                        phone =
+                                            updatedMember.phone
+                                                ?: ""
+
+                                        editing = false
+
+                                        message =
+                                            "Đã lưu thông tin tài khoản"
+
+                                    }.onFailure { error ->
+
+                                        message =
+                                            error.message
+                                                ?: "Không thể cập nhật thông tin"
+                                    }
+                                }
                             }
                         }
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PrimaryPurple
-                    ),
-                    shape = RoundedCornerShape(17.dp)
+
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+
+                    colors =
+                        ButtonDefaults
+                            .buttonColors(
+                                containerColor =
+                                    PrimaryPurple
+                            ),
+
+                    shape =
+                        RoundedCornerShape(17.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Save,
-                        contentDescription = null
-                    )
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    if (isSaving) {
 
-                    Text(
-                        text = "Lưu thay đổi",
-                        fontWeight = FontWeight.Bold
-                    )
+                        CircularProgressIndicator(
+                            color =
+                                Color.White,
+
+                            modifier =
+                                Modifier.size(21.dp)
+                        )
+
+                        Spacer(
+                            modifier =
+                                Modifier.width(8.dp)
+                        )
+
+                        Text(
+                            text =
+                                "Đang lưu..."
+                        )
+
+                    } else {
+
+                        Icon(
+                            imageVector =
+                                Icons.Default.Save,
+
+                            contentDescription =
+                                null
+                        )
+
+                        Spacer(
+                            modifier =
+                                Modifier.width(8.dp)
+                        )
+
+                        Text(
+                            text =
+                                "Lưu thay đổi",
+
+                            fontWeight =
+                                FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
 
+
+        // ==================================================
+        // MESSAGE
+        // ==================================================
+
         if (message.isNotBlank()) {
+
             item {
+
                 Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = if (message.startsWith("Đã")) {
-                        SoftGreen
-                    } else {
-                        SoftOrange
-                    },
-                    shape = RoundedCornerShape(15.dp)
+
+                    modifier =
+                        Modifier.fillMaxWidth(),
+
+                    color =
+                        if (
+                            message.startsWith("Đã")
+                        )
+                            SoftGreen
+                        else
+                            SoftOrange,
+
+                    shape =
+                        RoundedCornerShape(15.dp)
                 ) {
+
                     Text(
-                        text = message,
-                        modifier = Modifier.padding(13.dp),
-                        color = if (message.startsWith("Đã")) {
-                            SuccessGreen
-                        } else {
-                            WarningOrange
-                        },
-                        fontWeight = FontWeight.SemiBold
+                        text =
+                            message,
+
+                        modifier =
+                            Modifier.padding(13.dp),
+
+                        color =
+                            if (
+                                message.startsWith("Đã")
+                            )
+                                SuccessGreen
+                            else
+                                WarningOrange,
+
+                        fontWeight =
+                            FontWeight.SemiBold
                     )
                 }
             }
@@ -3634,12 +3946,10 @@ private fun ProfileSectionHeader(
             )
         }
 
-
         Spacer(
             modifier =
                 Modifier.width(10.dp)
         )
-
 
         Text(
             text =
@@ -3654,7 +3964,6 @@ private fun ProfileSectionHeader(
             fontWeight =
                 FontWeight.ExtraBold
         )
-
 
         if (actionText != null) {
 
@@ -3674,12 +3983,10 @@ private fun ProfileSectionHeader(
                         Modifier.size(16.dp)
                 )
 
-
                 Spacer(
                     modifier =
                         Modifier.width(4.dp)
                 )
-
 
                 Text(
                     text =
@@ -3699,22 +4006,35 @@ private fun ProfileSectionHeader(
 private fun ProfileSectionCard(
     content: @Composable () -> Unit
 ) {
+
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(
-                3.dp,
-                RoundedCornerShape(24.dp)
-            ),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = SurfaceWhite
-        )
+
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .shadow(
+                    3.dp,
+                    RoundedCornerShape(24.dp)
+                ),
+
+        shape =
+            RoundedCornerShape(24.dp),
+
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    SurfaceWhite
+            )
     ) {
+
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(13.dp)
+            modifier =
+                Modifier.padding(16.dp),
+
+            verticalArrangement =
+                Arrangement.spacedBy(13.dp)
         ) {
+
             content()
         }
     }
@@ -3732,7 +4052,8 @@ private fun ProfileInput(
     enabled: Boolean,
     icon: ImageVector,
     placeholder: String = "",
-    keyboardType: KeyboardType = KeyboardType.Text,
+    keyboardType: KeyboardType =
+        KeyboardType.Text,
     onValueChange: (String) -> Unit
 ) {
 
@@ -3798,7 +4119,7 @@ private fun ProfileInput(
 
 
 // ======================================================
-// SETTINGS PAGE
+// SETTINGS
 // ======================================================
 
 @Composable
@@ -3818,7 +4139,6 @@ private fun PremiumSettingsPage(
         mutableStateOf(true)
     }
 
-
     LazyColumn(
 
         modifier =
@@ -3834,13 +4154,11 @@ private fun PremiumSettingsPage(
 
         verticalArrangement =
             Arrangement.spacedBy(16.dp)
-
     ) {
 
         item {
 
             Card(
-
                 modifier =
                     Modifier.fillMaxWidth(),
 
@@ -3852,7 +4170,6 @@ private fun PremiumSettingsPage(
                         containerColor =
                             VerySoftPurple
                     )
-
             ) {
 
                 Column(
@@ -3874,12 +4191,10 @@ private fun PremiumSettingsPage(
                             TextPrimary
                     )
 
-
                     Spacer(
                         modifier =
                             Modifier.height(5.dp)
                     )
-
 
                     Text(
                         text =
@@ -3895,7 +4210,6 @@ private fun PremiumSettingsPage(
             }
         }
 
-
         item {
 
             SettingsTitle(
@@ -3903,7 +4217,6 @@ private fun PremiumSettingsPage(
                     "Thông báo"
             )
         }
-
 
         item {
 
@@ -3927,7 +4240,6 @@ private fun PremiumSettingsPage(
             )
         }
 
-
         item {
 
             PremiumSettingSwitch(
@@ -3950,7 +4262,6 @@ private fun PremiumSettingsPage(
             )
         }
 
-
         item {
 
             SettingsTitle(
@@ -3958,7 +4269,6 @@ private fun PremiumSettingsPage(
                     "Thư viện"
             )
         }
-
 
         item {
 
@@ -3982,11 +4292,9 @@ private fun PremiumSettingsPage(
             )
         }
 
-
         item {
 
             Card(
-
                 modifier =
                     Modifier.fillMaxWidth(),
 
@@ -3998,7 +4306,6 @@ private fun PremiumSettingsPage(
                         containerColor =
                             SurfaceWhite
                     )
-
             ) {
 
                 Row(
@@ -4034,12 +4341,10 @@ private fun PremiumSettingsPage(
                         )
                     }
 
-
                     Spacer(
                         modifier =
                             Modifier.width(13.dp)
                     )
-
 
                     Column {
 
@@ -4125,7 +4430,6 @@ private fun PremiumSettingSwitch(
                 containerColor =
                     SurfaceWhite
             )
-
     ) {
 
         Row(
@@ -4161,12 +4465,10 @@ private fun PremiumSettingSwitch(
                 )
             }
 
-
             Spacer(
                 modifier =
                     Modifier.width(13.dp)
             )
-
 
             Column(
                 modifier =
@@ -4192,7 +4494,6 @@ private fun PremiumSettingSwitch(
                         TextSecondary
                 )
             }
-
 
             Switch(
                 checked =

@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.firebase.firestore)
 
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation(libs.play.services.games.v2)
 
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlinx.serialization)

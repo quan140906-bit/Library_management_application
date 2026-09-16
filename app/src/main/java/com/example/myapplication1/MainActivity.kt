@@ -43,6 +43,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.CoroutineScope
+
 import com.example.myapplication1.data.BookRepository
 import com.example.myapplication1.data.Book
 import androidx.compose.runtime.LaunchedEffect
@@ -51,6 +53,7 @@ import com.example.myapplication1.ui.theme.DashBoard.InventoryManagementScreen
 import kotlinx.coroutines.launch
 import com.example.myapplication1.data.AuthRepository
 import androidx.compose.runtime.rememberCoroutineScope
+import com.example.myapplication1.data.AuthResponse
 
 class MainActivity : ComponentActivity() {
 
@@ -71,68 +74,251 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun ALFMApp() {
 
+    // ======================================================
+    // CURRENT USER
+    // ======================================================
+
+    var currentMemberId by remember {
+        mutableStateOf<Long?>(null)
+    }
+
+    var currentMemberName by remember {
+        mutableStateOf("")
+    }
+
+    var currentMemberEmail by remember {
+        mutableStateOf("")
+    }
+
+
+    // ======================================================
+    // SCREEN
+    // ======================================================
+
     var currentScreen by remember {
         mutableStateOf("login")
     }
 
-    val repository = remember { BookRepository() }
-    var books by remember { mutableStateOf(emptyList<Book>()) }
-    val scope = rememberCoroutineScope()
+
+    // ======================================================
+    // BOOK REPOSITORY
+    // ======================================================
+
+    val repository =
+        remember {
+            BookRepository()
+        }
+
+    var books by remember {
+        mutableStateOf(
+            emptyList<Book>()
+        )
+    }
+
+    val scope =
+        rememberCoroutineScope()
+
+
+    // ======================================================
+    // LOAD BOOKS
+    // ======================================================
 
     LaunchedEffect(currentScreen) {
-        try {
-            books = repository.getAllBooks()
-        } catch (e: Exception) {
-            e.printStackTrace()
+
+        if (
+            currentScreen == "library" ||
+            currentScreen == "add_book"
+        ) {
+
+            try {
+
+                books =
+                    repository.getAllBooks()
+
+            } catch (e: Exception) {
+
+                e.printStackTrace()
+            }
         }
     }
 
+
+    // ======================================================
+    // SCREEN NAVIGATION
+    // ======================================================
+
     when (currentScreen) {
 
+
+        // ==================================================
+        // LOGIN
+        // ==================================================
+
         "login" -> {
+
             LoginScreen(
+
                 onRegisterClick = {
-                    currentScreen = "register"
+
+                    currentScreen =
+                        "register"
                 },
-                onLoginSuccess = {
-                    currentScreen = "library"
+
+                onLoginSuccess = { response ->
+
+                    // --------------------------------------
+                    // SAVE LOGIN USER
+                    // --------------------------------------
+
+                    currentMemberId =
+                        response.memberId
+
+                    currentMemberName =
+                        response.fullName
+
+                    currentMemberEmail =
+                        response.email
+
+
+                    // --------------------------------------
+                    // GO TO LIBRARY
+                    // --------------------------------------
+
+                    currentScreen =
+                        "library"
                 }
             )
         }
+
+
+        // ==================================================
+        // REGISTER
+        // ==================================================
 
         "register" -> {
+
             RegisterScreen(
+
                 onLoginClick = {
-                    currentScreen = "login"
+
+                    currentScreen =
+                        "login"
                 }
             )
         }
+
+
+        // ==================================================
+        // LIBRARY
+        // ==================================================
 
         "library" -> {
-            InventoryManagementScreen(
-                books = books,
-                onMarkAsRead = { bookId ->
-                    scope.launch {
-                        repository.markAsRead(bookId)
-                        books = repository.getAllBooks()
+
+            currentMemberId?.let { memberId ->
+
+                InventoryManagementScreen(
+
+                    books =
+                        books,
+
+                    // ----------------------------------
+                    // IMPORTANT
+                    // ----------------------------------
+
+                    memberId =
+                        memberId,
+
+                    // ----------------------------------
+                    // MARK BOOK AS READ
+                    // ----------------------------------
+
+                    onMarkAsRead = { bookId ->
+
+                        scope.launch {
+
+                            try {
+
+                                repository.markAsRead(
+                                    bookId
+                                )
+
+                                books =
+                                    repository.getAllBooks()
+
+                            } catch (e: Exception) {
+
+                                e.printStackTrace()
+                            }
+                        }
+                    },
+
+                    // ----------------------------------
+                    // ADD BOOK
+                    // ----------------------------------
+
+                    onNavigateToAddBook = {
+
+                        currentScreen =
+                            "add_book"
                     }
-                },
-                onNavigateToAddBook = {
-                    currentScreen = "add_book"
-                }
-            )
+                )
+            }
         }
 
+
+        // ==================================================
+        // ADD BOOK
+        // ==================================================
+
         "add_book" -> {
+
             AddBookScreen(
+
                 onBackClick = {
-                    currentScreen = "library"
+
+                    currentScreen =
+                        "library"
                 },
-                onSave = { title, author, imageUrl, publishYear, genre ->
+
+                onSave = {
+                        title,
+                        author,
+                        imageUrl,
+                        publishYear,
+                        genre ->
+
                     scope.launch {
-                        repository.addBook(title, author, imageUrl, publishYear, genre)
-                        books = repository.getAllBooks()
-                        currentScreen = "library"
+
+                        try {
+
+                            repository.addBook(
+
+                                title =
+                                    title,
+
+                                author =
+                                    author,
+
+                                imageUrl =
+                                    imageUrl,
+
+                                publishYear =
+                                    publishYear,
+
+                                genre =
+                                    genre
+                            )
+
+                            books =
+                                repository.getAllBooks()
+
+                            currentScreen =
+                                "library"
+
+                        } catch (e: Exception) {
+
+                            e.printStackTrace()
+                        }
                     }
                 }
             )
@@ -148,7 +334,7 @@ fun ALFMApp() {
 @Composable
 fun LoginScreen(
     onRegisterClick: () -> Unit,
-    onLoginSuccess: () -> Unit
+    onLoginSuccess: (AuthResponse) -> Unit
 ) {
 
     val authRepository = remember { AuthRepository() }
@@ -381,8 +567,7 @@ fun LoginScreen(
 
                                             message = "Đăng nhập thành công!"
 
-                                            // Login thành công
-                                            onLoginSuccess()
+                                            onLoginSuccess(response)
                                         }
                                         .onFailure { error ->
 
@@ -459,6 +644,8 @@ fun LoginScreen(
         }
     }
 }
+
+
 
 
 // ======================================================

@@ -7,6 +7,7 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 
+
 // ============================================================
 // AUTH
 // ============================================================
@@ -79,6 +80,7 @@ enum class BookStatus {
     READ, READING, UNREAD
 }
 
+// Model dùng cho UI Android
 data class Book(
     val bookId: Long,
     val title: String,
@@ -90,9 +92,45 @@ data class Book(
     val quantity: Int,
     val availableQuantity: Int,
     val imageUrl: String? = null,
+    val publishYear: Int? = null,
     val status: BookStatus = BookStatus.UNREAD
 )
 
+// ============================================================
+// BOOK REQUEST
+// ============================================================
+
+// Dữ liệu Android gửi lên Spring Boot
+// Khớp với Book.java bên backend
+data class BookRequest(
+    val bookId: Long? = null,
+    val title: String,
+    val isbn: String? = null,
+    val tag: String? = null,
+    val series: String? = null,
+    val categoryId: Long? = null,
+    val authorId: Long? = null,
+    val quantity: Int = 1,
+    val availableQuantity: Int = 1,
+    val publishYear: Int? = null,
+    val imageUrl: String? = null
+)
+
+// Dữ liệu Spring Boot trả về từ LIB_BOOKS
+// Vì backend Book.java trả AUTHORID/CATEGORYID
+data class BookResponse(
+    val bookId: Long,
+    val title: String,
+    val isbn: String?,
+    val tag: String?,
+    val series: String?,
+    val categoryId: Long?,
+    val authorId: Long?,
+    val quantity: Int,
+    val availableQuantity: Int,
+    val publishYear: Int?,
+    val imageUrl: String?
+)
 
 // ============================================================
 // BORROW
@@ -145,28 +183,28 @@ interface AuthApi {
 interface MemberApi {
 
     @GET("api/members")
-    suspend fun getMembers(): List<Member>
+    suspend fun getAllMembers(): List<Member>
 
-    @GET("api/members/{id}")
+    @GET("api/members/{memberId}")
     suspend fun getMember(
-        @Path("id") id: Long
+        @Path("memberId") memberId: Long
     ): Member
 
     @POST("api/members")
     suspend fun createMember(
-        @Body member: Member
+        @Body request: Member
     ): Member
 
-    @PUT("api/members/{id}")
+    @PUT("api/members/{memberId}")
     suspend fun updateMember(
-        @Path("id") id: Long,
-        @Body member: Member
+        @Path("memberId") memberId: Long,
+        @Body request: Member
     ): Member
 
-    @DELETE("api/members/{id}")
+    @DELETE("api/members/{memberId}")
     suspend fun deleteMember(
-        @Path("id") id: Long
-    )
+        @Path("memberId") memberId: Long
+    ): retrofit2.Response<Unit>
 }
 
 
@@ -241,23 +279,23 @@ interface CategoryApi {
 interface BookApi {
 
     @GET("api/books")
-    suspend fun getBooks(): List<Book>
+    suspend fun getBooks(): List<BookResponse>
 
     @GET("api/books/{id}")
     suspend fun getBook(
         @Path("id") id: Long
-    ): Book
+    ): BookResponse
 
     @POST("api/books")
     suspend fun createBook(
-        @Body book: Book
-    ): Book
+        @Body book: BookRequest
+    ): BookResponse
 
     @PUT("api/books/{id}")
     suspend fun updateBook(
         @Path("id") id: Long,
-        @Body book: Book
-    ): Book
+        @Body book: BookRequest
+    ): BookResponse
 
     @DELETE("api/books/{id}")
     suspend fun deleteBook(
