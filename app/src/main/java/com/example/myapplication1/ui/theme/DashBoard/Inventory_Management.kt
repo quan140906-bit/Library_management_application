@@ -104,6 +104,7 @@ import coil.compose.AsyncImage
 import com.example.myapplication1.data.Book
 import com.example.myapplication1.data.BookStatus
 import com.example.myapplication1.data.MemberRepository
+import com.example.myapplication1.data.ReadingProgressRepository
 import kotlinx.coroutines.launch
 
 
@@ -161,212 +162,173 @@ fun InventoryManagementScreen(
     onNavigateToAiSearch: () -> Unit,
     memberId: Long
 ) {
+    var currentPage by remember { mutableStateOf(DashboardPage.HOME) }
+    var searchMode by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedFilter by remember { mutableStateOf(BookFilter.ALL) }
+    var selectedBookId by remember { mutableStateOf<Long?>(null) }
 
-    var currentPage by remember {
-        mutableStateOf(DashboardPage.HOME)
-    }
-
-    var searchMode by remember {
-        mutableStateOf(false)
-    }
-
-    var searchQuery by remember {
-        mutableStateOf("")
-    }
-
-    var selectedFilter by remember {
-        mutableStateOf(BookFilter.ALL)
-    }
-
-    var selectedBookId by remember {
-        mutableStateOf<Long?>(null)
-    }
-
-    val viewCounts = remember {
-        mutableStateMapOf<Long, Int>()
-    }
+    val viewCounts = remember { mutableStateMapOf<Long, Int>() }
+    val progressByBook = remember { mutableStateMapOf<Long, Int>() }
+    val readingProgressRepository = remember { ReadingProgressRepository() }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(books) {
         books.forEach { book ->
-            book.bookId?.let { id ->
-                if (!viewCounts.containsKey(id)) {
-                    viewCounts[id] = 0
-                }
+            val id = book.bookId
+            if (!viewCounts.containsKey(id)) {
+                viewCounts[id] = 0
             }
         }
     }
 
-    val drawerState = rememberDrawerState(
-        initialValue = DrawerValue.Closed
-    )
-
-    val scope = rememberCoroutineScope()
-
-    val totalBooks = books.size
-
-    val readCount = books.count {
-        it.status == BookStatus.READ
-    }
-
-    val readingCount = books.count {
-        it.status == BookStatus.READING
-    }
-
-    val unreadCount = books.count {
-        it.status == BookStatus.UNREAD
-    }
-
-    val readingProgress =
-        if (totalBooks == 0) {
-            0f
-        } else {
-            readCount.toFloat() / totalBooks.toFloat()
+    // Load trạng thái/tiến độ thật của user từ Oracle thông qua Spring Boot.
+    LaunchedEffect(memberId, books) {
+        try {
+            val rows = readingProgressRepository.getMemberProgress(memberId)
+            progressByBook.clear()
+            rows.forEach { row ->
+                progressByBook[row.bookId] = row.progress.coerceIn(0, 100)
+            }
+        } catch (e: Exception) {
+            println("LOAD READING PROGRESS FAILED: ${e.message}")
+            e.printStackTrace()
         }
+    }
+
+    fun statusFor(bookId: Long): BookStatus {
+        val progress = progressByBook[bookId] ?: 0
+        return when {
+            progress >= 100 -> BookStatus.READ
+            progress > 0 -> BookStatus.READING
+            else -> BookStatus.UNREAD
+        }
+    }
+
+    val displayBooks = books.map { book ->
+        book.copy(status = statusFor(book.bookId))
+    }
+
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val totalBooks = displayBooks.size
+    val readCount = displayBooks.count { it.status == BookStatus.READ }
+    val readingCount = displayBooks.count { it.status == BookStatus.READING }
+    val unreadCount = displayBooks.count { it.status == BookStatus.UNREAD }
+
+    // Tổng tiến độ = trung bình % của tất cả sách.
+    val readingProgress = if (totalBooks == 0) {
+        0f
+    } else {
+        displayBooks.sumOf { progressByBook[it.bookId] ?: 0 }.toFloat() /
+                (totalBooks * 100f)
+    }
 
     val animatedProgress by animateFloatAsState(
-        targetValue = readingProgress,
+        targetValue = readingProgress.coerceIn(0f, 1f),
         animationSpec = tween(700),
         label = "readingProgress"
     )
+    val progressPercent = (animatedProgress * 100).toInt()
+    val selectedBook = displayBooks.firstOrNull { it.bookId == selectedBookId }
 
-    val progressPercent =
-        (animatedProgress * 100).toInt()
-
-    val selectedBook =
-        books.firstOrNull {
-            it.bookId == selectedBookId
+    val filteredBooks = displayBooks
+        .filter { book ->
+            when (selectedFilter) {
+                BookFilter.ALL -> true
+                BookFilter.READING -> book.status == BookStatus.READING
+                BookFilter.READ -> book.status == BookStatus.READ
+                BookFilter.UNREAD -> book.status == BookStatus.UNREAD
+            }
+        }
+        .filter { book ->
+            if (searchQuery.isBlank()) {
+                true
+            } else {
+                val titleMatch = book.title.contains(searchQuery, ignoreCase = true)
+                val authorMatch = book.author?.authorName?.contains(
+                    searchQuery,
+                    ignoreCase = true
+                ) == true
+                titleMatch || authorMatch
+            }
         }
 
-    val filteredBooks =
-        books
-            .filter { book ->
+    val topBooks = displayBooks
+        .sortedByDescending { book -> viewCounts[book.bookId] ?: 0 }
+        .take(5)
 
-                when (selectedFilter) {
-
-                    BookFilter.ALL ->
-                        true
-
-                    BookFilter.READING ->
-                        book.status == BookStatus.READING
-
-                    BookFilter.READ ->
-                        book.status == BookStatus.READ
-
-                    BookFilter.UNREAD ->
-                        book.status == BookStatus.UNREAD
-                }
+    fun saveProgress(bookId: Long, value: Int, closeDialog: Boolean = false) {
+        scope.launch {
+            try {
+                val saved = readingProgressRepository.updateProgress(
+                    memberId = memberId,
+                    bookId = bookId,
+                    progress = value.coerceIn(0, 100)
+                )
+                progressByBook[bookId] = saved.progress.coerceIn(0, 100)
+                if (closeDialog) selectedBookId = null
+            } catch (e: Exception) {
+                println("UPDATE READING PROGRESS FAILED: ${e.message}")
+                e.printStackTrace()
             }
-            .filter { book ->
+        }
+    }
 
-                if (searchQuery.isBlank()) {
-                    true
-                } else {
-
-                    val titleMatch =
-                        book.title.contains(
-                            searchQuery,
-                            ignoreCase = true
-                        )
-
-                    val authorMatch =
-                        book.author
-                            ?.authorName
-                            ?.contains(
-                                searchQuery,
-                                ignoreCase = true
-                            ) == true
-
-                    titleMatch || authorMatch
-                }
+    fun markBookAsRead(bookId: Long, closeDialog: Boolean = false) {
+        scope.launch {
+            try {
+                val saved = readingProgressRepository.markAsRead(
+                    memberId = memberId,
+                    bookId = bookId
+                )
+                progressByBook[bookId] = saved.progress.coerceIn(0, 100)
+                if (closeDialog) selectedBookId = null
+            } catch (e: Exception) {
+                println("MARK AS READ FAILED: ${e.message}")
+                e.printStackTrace()
             }
-
-    val topBooks =
-        books
-            .sortedByDescending { book ->
-                viewCounts[book.bookId] ?: 0
-            }
-            .take(5)
-
+        }
+    }
 
     ModalNavigationDrawer(
-
         drawerState = drawerState,
-
         drawerContent = {
-
             PremiumDrawer(
-
                 currentPage = currentPage,
-
                 onPageSelected = { page ->
-
                     currentPage = page
-
-                    scope.launch {
-                        drawerState.close()
-                    }
+                    scope.launch { drawerState.close() }
                 }
             )
         }
-
     ) {
-
         Scaffold(
-
             containerColor = AppBackground,
-
             topBar = {
-
                 PremiumTopBar(
-
                     currentPage = currentPage,
-
                     totalBooks = totalBooks,
-
                     searchMode = searchMode,
-
                     searchQuery = searchQuery,
-
-                    onSearchQueryChange = {
-                        searchQuery = it
-                    },
-
-                    onMenuClick = {
-
-                        scope.launch {
-                            drawerState.open()
-                        }
-                    },
-
+                    onSearchQueryChange = { searchQuery = it },
+                    onMenuClick = { scope.launch { drawerState.open() } },
                     onSearchClick = {
-
-                        if (searchMode) {
-                            searchQuery = ""
-                        }
-
+                        if (searchMode) searchQuery = ""
                         searchMode = !searchMode
                     }
                 )
             },
-
             floatingActionButton = {
-
                 if (currentPage == DashboardPage.HOME) {
-
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-
                         FloatingActionButton(
                             onClick = onNavigateToAiSearch,
-                            modifier =
-                                Modifier
-                                    .size(56.dp)
-                                    .shadow(
-                                        elevation = 10.dp,
-                                        shape = CircleShape
-                                    ),
+                            modifier = Modifier
+                                .size(56.dp)
+                                .shadow(elevation = 10.dp, shape = CircleShape),
                             containerColor = DeepPurple,
                             contentColor = Color.White,
                             shape = CircleShape
@@ -379,164 +341,76 @@ fun InventoryManagementScreen(
                         }
 
                         FloatingActionButton(
-
-                            onClick =
-                                onNavigateToAddBook,
-
-                            modifier =
-                                Modifier
-                                    .size(64.dp)
-                                    .shadow(
-                                        elevation = 12.dp,
-                                        shape = CircleShape
-                                    ),
-
-                            containerColor =
-                                PrimaryPurple,
-
-                            contentColor =
-                                Color.White,
-
-                            shape =
-                                CircleShape
-
+                            onClick = onNavigateToAddBook,
+                            modifier = Modifier
+                                .size(64.dp)
+                                .shadow(elevation = 12.dp, shape = CircleShape),
+                            containerColor = PrimaryPurple,
+                            contentColor = Color.White,
+                            shape = CircleShape
                         ) {
-
                             Icon(
-                                imageVector =
-                                    Icons.Default.Add,
-
-                                contentDescription =
-                                    "Thêm sách",
-
-                                modifier =
-                                    Modifier.size(32.dp)
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Thêm sách",
+                                modifier = Modifier.size(32.dp)
                             )
                         }
                     }
                 }
             }
-
         ) { padding ->
-
             when (currentPage) {
-
                 DashboardPage.HOME -> {
-
                     PremiumHomePage(
-
-                        modifier =
-                            Modifier.padding(padding),
-
-                        books =
-                            filteredBooks,
-
-                        topBooks =
-                            topBooks,
-
-                        viewCounts =
-                            viewCounts,
-
-                        totalBooks =
-                            totalBooks,
-
-                        readCount =
-                            readCount,
-
-                        readingCount =
-                            readingCount,
-
-                        unreadCount =
-                            unreadCount,
-
-                        animatedProgress =
-                            animatedProgress,
-
-                        progressPercent =
-                            progressPercent,
-
-                        selectedFilter =
-                            selectedFilter,
-
-                        onFilterChange = {
-                            selectedFilter = it
-                        },
-
+                        modifier = Modifier.padding(padding),
+                        books = filteredBooks,
+                        topBooks = topBooks,
+                        viewCounts = viewCounts,
+                        progressByBook = progressByBook,
+                        totalBooks = totalBooks,
+                        readCount = readCount,
+                        readingCount = readingCount,
+                        unreadCount = unreadCount,
+                        animatedProgress = animatedProgress,
+                        progressPercent = progressPercent,
+                        selectedFilter = selectedFilter,
+                        onFilterChange = { selectedFilter = it },
                         onBookClick = { book ->
-
-                            selectedBookId =
-                                book.bookId
-
-                            book.bookId?.let { id ->
-
-                                viewCounts[id] =
-                                    (viewCounts[id] ?: 0) + 1
-                            }
+                            selectedBookId = book.bookId
+                            viewCounts[book.bookId] = (viewCounts[book.bookId] ?: 0) + 1
                         },
-
-                        onMarkAsRead = {
-                            onMarkAsRead(it)
-                        }
+                        onMarkAsRead = { id -> markBookAsRead(id.toLong()) }
                     )
                 }
-
 
                 DashboardPage.ACCOUNT -> {
-
                     PremiumAccountPage(
-
-                        modifier =
-                            Modifier.padding(padding),
-
-                        memberId =
-                            memberId,
-
-                        totalBooks =
-                            totalBooks,
-
-                        readCount =
-                            readCount,
-
-                        readingCount =
-                            readingCount
+                        modifier = Modifier.padding(padding),
+                        memberId = memberId,
+                        totalBooks = totalBooks,
+                        readCount = readCount,
+                        readingCount = readingCount
                     )
                 }
 
-
                 DashboardPage.SETTINGS -> {
-
-                    PremiumSettingsPage(
-                        modifier =
-                            Modifier.padding(padding)
-                    )
+                    PremiumSettingsPage(modifier = Modifier.padding(padding))
                 }
             }
         }
 
-
         selectedBook?.let { book ->
-
+            val currentProgress = progressByBook[book.bookId] ?: 0
             PremiumBookDialog(
-
                 book = book,
-
-                views =
-                    viewCounts[book.bookId] ?: 0,
-
-                onDismiss = {
-                    selectedBookId = null
+                views = viewCounts[book.bookId] ?: 0,
+                progress = currentProgress,
+                onDismiss = { selectedBookId = null },
+                onProgressChange = { value ->
+                    saveProgress(book.bookId, value)
                 },
-
                 onMarkAsRead = {
-
-                    book.bookId?.let { id ->
-
-                        onMarkAsRead(
-                            id.toInt()
-                        )
-                    }
-
-                    selectedBookId = null
+                    markBookAsRead(book.bookId, closeDialog = true)
                 }
             )
         }
@@ -1053,6 +927,7 @@ private fun PremiumHomePage(
     books: List<Book>,
     topBooks: List<Book>,
     viewCounts: Map<Long, Int>,
+    progressByBook: Map<Long, Int>,
     totalBooks: Int,
     readCount: Int,
     readingCount: Int,
@@ -1238,13 +1113,10 @@ private fun PremiumHomePage(
             item {
 
                 ContinueReadingCard(
-                    book =
-                        continueBook,
-
+                    book = continueBook,
+                    progress = progressByBook[continueBook.bookId] ?: 0,
                     onClick = {
-                        onBookClick(
-                            continueBook
-                        )
+                        onBookClick(continueBook)
                     }
                 )
             }
@@ -1980,6 +1852,7 @@ private fun SectionHeader(
 @Composable
 private fun ContinueReadingCard(
     book: Book,
+    progress: Int,
     onClick: () -> Unit
 ) {
 
@@ -2106,7 +1979,7 @@ private fun ContinueReadingCard(
                 LinearProgressIndicator(
 
                     progress = {
-                        0.55f
+                        progress.coerceIn(0, 100) / 100f
                     },
 
                     modifier =
@@ -2129,7 +2002,7 @@ private fun ContinueReadingCard(
 
                 Text(
                     text =
-                        "Tiếp tục hành trình đọc →",
+                        "Đã đọc ${progress.coerceIn(0, 100)}%  •  Tiếp tục →",
 
                     fontSize =
                         11.sp,
@@ -2890,193 +2763,152 @@ private fun PremiumEmptyLibrary() {
 private fun PremiumBookDialog(
     book: Book,
     views: Int,
+    progress: Int,
     onDismiss: () -> Unit,
+    onProgressChange: (Int) -> Unit,
     onMarkAsRead: () -> Unit
 ) {
+    val safeProgress = progress.coerceIn(0, 100)
 
     AlertDialog(
-
-        onDismissRequest =
-            onDismiss,
-
-        shape =
-            RoundedCornerShape(28.dp),
-
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(28.dp),
         title = {
-
             Column {
-
                 Text(
-                    text =
-                        book.title,
-
-                    fontWeight =
-                        FontWeight.ExtraBold,
-
-                    color =
-                        TextPrimary
+                    text = book.title,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = TextPrimary
                 )
-
-                Spacer(
-                    modifier =
-                        Modifier.height(3.dp)
-                )
-
+                Spacer(modifier = Modifier.height(3.dp))
                 Text(
-                    text =
-                        book.author
-                            ?.authorName
-                            ?: "Chưa rõ tác giả",
-
-                    color =
-                        TextSecondary,
-
-                    fontSize =
-                        13.sp
+                    text = book.author?.authorName ?: "Chưa rõ tác giả",
+                    color = TextSecondary,
+                    fontSize = 13.sp
                 )
             }
         },
-
         text = {
-
             Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    BookStatusBadge(status = book.status)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Icon(
+                        imageVector = Icons.Default.Visibility,
+                        contentDescription = null,
+                        tint = TextSecondary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Text(
+                        text = "$views lượt xem",
+                        color = TextSecondary,
+                        fontSize = 12.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
 
                 Row(
-                    verticalAlignment =
-                        Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-
-                    BookStatusBadge(
-                        status =
-                            book.status
-                    )
-
-                    Spacer(
-                        modifier =
-                            Modifier.width(12.dp)
-                    )
-
-                    Icon(
-                        imageVector =
-                            Icons.Default.Visibility,
-
-                        contentDescription =
-                            null,
-
-                        tint =
-                            TextSecondary,
-
-                        modifier =
-                            Modifier.size(16.dp)
-                    )
-
-                    Spacer(
-                        modifier =
-                            Modifier.width(5.dp)
-                    )
-
                     Text(
-                        text =
-                            "$views lượt xem",
-
-                        color =
-                            TextSecondary,
-
-                        fontSize =
-                            12.sp
+                        text = "Tiến độ đọc",
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "$safeProgress%",
+                        color = PrimaryPurple,
+                        fontWeight = FontWeight.ExtraBold
                     )
                 }
 
-                if (
-                    !book.category
-                        ?.categoryName
-                        .isNullOrBlank()
-                ) {
+                Spacer(modifier = Modifier.height(8.dp))
 
-                    Spacer(
-                        modifier =
-                            Modifier.height(15.dp)
-                    )
-
-                    Text(
-                        text =
-                            "Thể loại",
-
-                        color =
-                            TextSecondary,
-
-                        fontSize =
-                            11.sp
-                    )
-
-                    Text(
-                        text =
-                            book.category
-                                ?.categoryName
-                                ?: "",
-
-                        fontWeight =
-                            FontWeight.SemiBold
-                    )
-                }
-            }
-        },
-
-        confirmButton = {
-
-            if (
-                book.status !=
-                BookStatus.READ
-            ) {
-
-                Button(
-
-                    onClick =
-                        onMarkAsRead,
-
-                    colors =
-                        ButtonDefaults
-                            .buttonColors(
-                                containerColor =
-                                    PrimaryPurple
-                            ),
-
-                    shape =
-                        RoundedCornerShape(14.dp)
-                ) {
-
-                    Icon(
-                        imageVector =
-                            Icons.Default.Check,
-
-                        contentDescription =
-                            null
-                    )
-
-                    Spacer(
-                        modifier =
-                            Modifier.width(6.dp)
-                    )
-
-                    Text(
-                        text =
-                            "Đánh dấu đã đọc"
-                    )
-                }
-            }
-        },
-
-        dismissButton = {
-
-            TextButton(
-                onClick =
-                    onDismiss
-            ) {
-
-                Text(
-                    text =
-                        "Đóng"
+                LinearProgressIndicator(
+                    progress = { safeProgress / 100f },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(9.dp)
+                        .clip(CircleShape),
+                    color = PrimaryPurple,
+                    trackColor = SoftPurple
                 )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(
+                        enabled = safeProgress > 0,
+                        onClick = {
+                            onProgressChange((safeProgress - 10).coerceAtLeast(0))
+                        }
+                    ) {
+                        Text("-10%")
+                    }
+
+                    Text(
+                        text = when {
+                            safeProgress >= 100 -> "Đã đọc xong"
+                            safeProgress > 0 -> "Đang đọc"
+                            else -> "Chưa đọc"
+                        },
+                        color = TextSecondary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    TextButton(
+                        enabled = safeProgress < 100,
+                        onClick = {
+                            onProgressChange((safeProgress + 10).coerceAtMost(100))
+                        }
+                    ) {
+                        Text("+10%")
+                    }
+                }
+
+                if (!book.category?.categoryName.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(15.dp))
+                    Text(
+                        text = "Thể loại",
+                        color = TextSecondary,
+                        fontSize = 11.sp
+                    )
+                    Text(
+                        text = book.category?.categoryName ?: "",
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            if (book.status != BookStatus.READ) {
+                Button(
+                    onClick = onMarkAsRead,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = PrimaryPurple
+                    ),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "Đánh dấu đã đọc")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = "Đóng")
             }
         }
     )
